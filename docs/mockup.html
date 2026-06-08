@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>틈새 중국어 — 화면 시안</title>
+<link href="https://cdn.jsdelivr.net/gh/fonts-archive/Cafe24Ssurround/subsets/Cafe24Ssurround-dynamic-subset.css" rel="stylesheet">
+<style>
+  :root{
+    --bg:#ECE8F6; --bg2:#FFFFFF; --card:#FFFFFF;
+    --ink:#3D3450; --sub:#8E86A0; --muted:#BCB4CE; --faint:#D6CFE4;
+    --line:#F0ECF8; --line-p:#F1ECF9;
+    --purple:#5B3F8C; --purple-s:#ECE4F7;
+    /* 흰색+보라 통일: 기존 컬러 변수들을 보라 계열로 재지정 */
+    --pink:#6E4FAE;   --pink-s:#ECE4F7;
+    --mint:#6E4FAE;   --mint-s:#EFEAFA;
+    --peach:#9173C9;  --peach-s:#EEE8FA;
+    --blue:#6E4FAE;   --blue-s:#ECE4F7;
+    --yellow:#7A5CB8; --yellow-s:#EFEAFA;
+  }
+  *{ box-sizing:border-box; -webkit-font-smoothing:antialiased; }
+  body{ margin:0; background:var(--bg); color:var(--ink);
+        font-family:'Cafe24 Ssurround','Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+        padding:52px 20px 72px; }
+  .han{ font-family:'PingFang SC','Noto Sans SC','Microsoft YaHei',sans-serif; }
+  header{ text-align:center; margin-bottom:44px; }
+  header h1{ font-size:23px; margin:0 0 8px; color:var(--purple); }
+  header p{ color:var(--sub); font-size:13px; margin:0; }
+  .wrap{ display:flex; flex-wrap:wrap; gap:38px; justify-content:center; align-items:flex-start; max-width:1180px; margin:0 auto; }
+  .col{ width:294px; }
+  .cap{ text-align:center; margin-top:18px; }
+  .cap b{ font-size:13px; color:var(--purple); } .cap span{ display:block; color:var(--sub); font-size:11px; margin-top:4px; }
+
+  .phone{ width:294px; height:620px; background:#fff; border-radius:46px; padding:10px;
+          box-shadow:0 20px 46px -18px rgba(91,63,140,.30), 0 0 0 1px #F0EAF7; }
+  .screen{ width:100%; height:100%; border-radius:38px; overflow:hidden; position:relative;
+           display:flex; flex-direction:column; background:var(--bg2); }
+  .pill{ position:absolute; top:14px; left:50%; transform:translateX(-50%); width:88px; height:20px;
+         background:#E7DCF2; border-radius:11px; z-index:9; }
+  .status{ height:46px; display:flex; align-items:flex-end; justify-content:space-between;
+           padding:0 24px 7px; font-size:13px; color:var(--ink); flex-shrink:0; }
+  .status .ic{ display:flex; gap:6px; align-items:center; }
+  svg{ display:block; } .ic svg{ width:16px; height:16px; }
+
+  .appbar{ padding:8px 22px 16px; flex-shrink:0; }
+  .appbar .kicker{ font-size:11px; letter-spacing:1px; color:var(--sub); }
+  .appbar h2{ margin:6px 0 0; font-size:24px; color:var(--ink); }
+
+  .body{ flex:1; overflow:hidden; padding:6px 13px 18px; scrollbar-width:none; -ms-overflow-style:none; }
+  .body::-webkit-scrollbar{ width:0; height:0; display:none; }
+  .muted{ color:var(--muted); } .sub{ color:var(--sub); } .small{ font-size:11px; }
+
+  .card{ background:var(--card); border-radius:22px; padding:18px; border:1px solid var(--line-p); box-shadow:0 8px 20px -14px rgba(91,63,140,.20); }
+  .card + .card{ margin-top:14px; }
+
+  .qrow{ display:flex; align-items:center; gap:11px; background:var(--card); border-radius:16px; padding:12px 14px;
+         border:1px solid var(--line-p); box-shadow:0 8px 18px -14px rgba(91,63,140,.18); }
+  .qrow + .qrow{ margin-top:12px; }
+  .chip{ width:32px; height:32px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .chip svg{ width:17px; height:17px; }
+  .qrow .lbl{ font-size:13.5px; white-space:nowrap; } .qrow .chev{ margin-left:auto; color:var(--faint); }
+
+  .progress{ height:9px; background:#F0E9F7; border-radius:99px; overflow:hidden; }
+  .progress > i{ display:block; height:100%; border-radius:99px;
+                 background:linear-gradient(90deg,#8E6BC9,#5B3F8C); }
+
+  .nav{ height:66px; background:#fff; display:flex; flex-shrink:0; box-shadow:0 -6px 18px -12px rgba(91,63,140,.18); }
+  .nav a{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+          gap:6px; font-size:10px; color:var(--faint); }
+  .nav a svg{ width:21px; height:21px; }
+  .nav a.on{ color:var(--purple); }
+
+  .tag{ display:inline-block; font-size:11px; padding:4px 12px; border-radius:99px; }
+  .pin{ color:var(--pink); font-size:11px; margin-top:3px; }
+
+  .talkbtn{ width:30px; height:30px; border-radius:50%; border:none; background:var(--purple-s);
+            color:var(--purple); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .talkbtn svg{ width:15px; height:15px; }
+
+  /* 회화 턴 (교재 그대로): 화자 태그 + 중국어 + 병음 + 한 줄 듣기 */
+  .langtoggle{ display:flex; background:#F0E9F7; border-radius:9px; padding:2px; gap:2px; font-size:11px; flex-shrink:0; }
+  .langtoggle span{ padding:5px 9px; border-radius:7px; color:var(--sub); }
+  .langtoggle span.on{ background:var(--purple); color:#fff; }
+  .playall{ display:inline-flex; align-items:center; gap:4px; background:var(--purple); color:#fff;
+            border:none; border-radius:9px; padding:5px 9px; font-size:10.5px;
+            box-shadow:0 5px 10px -8px rgba(91,63,140,.6); }
+  .playall svg{ width:11px; height:11px; }
+  .turn{ display:flex; gap:8px; align-items:flex-start; padding:9px 0; }
+  .turn + .turn{ border-top:1px solid var(--line-p); }
+  .turn .tx{ flex:1; min-width:0; font-family:'Malgun Gothic','맑은 고딕',sans-serif; }
+  .turn .tx .han{ font-size:14px; line-height:1.45; color:var(--ink); }
+  .turn .tx .pin{ color:var(--sub); font-size:10.5px; margin-top:2px; line-height:1.35; }
+  /* 화자 라벨 A/B: 작은 가로 태그 */
+  .turn .who{ font-size:11px; font-weight:700; padding:3px 8px; border-radius:7px; line-height:1.3;
+              align-self:flex-start; flex-shrink:0; }
+
+  .vrow{ display:flex; align-items:center; gap:7px; padding:10px 0; }
+  .vrow + .vrow{ border-top:1px solid var(--line-p); }
+  .vlead{ width:58px; text-align:center; }
+  .vinfo{ flex:1; min-width:0; }
+  .vbtns{ display:flex; align-items:center; gap:2px; flex-shrink:0; margin-left:auto; }
+
+  .dropdown{ display:inline-flex; align-items:center; gap:8px; background:#fff; border-radius:11px;
+             padding:8px 12px; font-size:14px; color:var(--ink); border:1px solid #C4C0CE; }
+  .dropdown .cv{ color:var(--purple); }
+  .dropdown svg{ width:14px; height:14px; color:var(--muted); }
+  .menu{ background:#fff; border-radius:13px; box-shadow:0 14px 30px -12px rgba(91,63,140,.4); padding:6px; }
+  .menu div{ padding:11px 14px; border-radius:9px; font-size:14px; }
+  .menu div.on{ background:var(--purple-s); color:var(--purple); }
+  .paste{ background:#fff; border-radius:14px; padding:13px; font-size:12px; color:var(--sub);
+           box-shadow:inset 0 0 0 1px var(--line-p); line-height:1.9; white-space:pre; font-family:monospace; }
+  .field{ background:#fff; border-radius:13px; padding:12px 14px; box-shadow:inset 0 0 0 1px var(--line-p);
+           display:flex; align-items:center; gap:10px; }
+  .seg{ display:flex; background:#F0E9F7; border-radius:14px; padding:4px; gap:4px; }
+  .seg span{ flex:1; text-align:center; font-size:12px; padding:8px 0; border-radius:11px; color:var(--sub); }
+  .seg span.on{ background:#fff; color:var(--purple); box-shadow:0 4px 10px -6px rgba(91,63,140,.4); }
+  .mask{ height:13px; border-radius:7px; margin:5px 0; width:78%;
+         background:repeating-linear-gradient(90deg,#EFE7F8,#EFE7F8 10px,#F6F0FB 10px,#F6F0FB 20px);
+         color:var(--muted); font-size:10px; line-height:13px; padding-left:8px; }
+  .pos{ display:inline-block; font-size:10px; color:var(--mint); background:var(--mint-s);
+        padding:2px 7px; border-radius:99px; margin-right:5px; }
+  /* 교재식 품사 박스 (작은 색 박스, 한 글자 약자) */
+  .posbox{ display:inline-flex; align-items:center; justify-content:center; min-width:16px; height:16px;
+           padding:0 3px; border-radius:4px; font-size:10px; background:var(--purple-s); color:var(--purple); margin-right:4px; }
+  /* 품사별 색 구분 */
+  .po-n{ background:#DEE9FB; color:#3667A8; }    /* 명사 */
+  .po-v{ background:#FBE2D6; color:#BF5A36; }    /* 동사 */
+  .po-adj{ background:#FBE0EC; color:#C2457E; }  /* 형용사 */
+  .po-adv{ background:#DCF1EA; color:#2E8B6B; }  /* 부사 */
+  .po-m{ background:#ECE4F7; color:#5B3F8C; }    /* 양사 */
+  .po-pron{ background:#F7EBC9; color:#9A7B1F; } /* 대명사 */
+  .vhan{ font-size:16px; white-space:nowrap; flex-shrink:0; width:52px; }
+  .vmean{ font-size:13px; white-space:nowrap; font-family:'Malgun Gothic','맑은 고딕',sans-serif; }
+  .vpin{ color:var(--sub); font-size:11px; white-space:nowrap; font-family:'Malgun Gothic','맑은 고딕',sans-serif; }
+  .starbtn{ border:none; background:transparent; color:var(--faint); display:flex; flex-shrink:0; padding:3px; }
+  .starbtn.on{ color:#E8B53D; }
+  .starbtn svg{ width:17px; height:17px; }
+  .editbtn{ width:30px; height:30px; border-radius:9px; border:1px solid #C4C0CE; background:#fff;
+            color:var(--purple); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .editbtn svg{ width:16px; height:16px; }
+  .delbtn{ border:none; background:#FBE0E6; color:#C24062; width:26px; height:26px; border-radius:8px;
+           display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .delbtn svg{ width:14px; height:14px; }
+  .addrow{ display:flex; align-items:center; justify-content:center; gap:6px; border:1.5px dashed #C7BEDC;
+           border-radius:12px; padding:11px; color:var(--purple); font-size:13px; margin-top:12px; }
+  .addrow svg{ width:15px; height:15px; }
+  /* 교재처럼: 화자 라벨을 작은 색 태그로 (인쇄된 그대로 표시) */
+  .who{ flex-shrink:0; padding:3px 9px; border-radius:8px; font-size:11px; align-self:flex-start;
+        box-shadow:0 4px 10px -7px rgba(91,63,140,.4); }
+  .posfilter{ display:flex; flex-wrap:wrap; gap:6px; }
+  .posfilter span{ font-size:12px; padding:6px 11px; border-radius:9px; background:#fff;
+        border:1px solid var(--line-p); color:var(--sub); }
+  .posfilter span.on{ background:var(--purple); color:#fff; border-color:var(--purple); }
+  .searchbar{ display:flex; align-items:center; gap:9px; background:#fff; border:1px solid var(--line-p);
+        border-radius:13px; padding:11px 14px; margin-bottom:12px; }
+  .searchbar svg{ width:17px; height:17px; color:var(--muted); flex-shrink:0; }
+  .searchbar .ph{ color:var(--muted); font-size:13px; }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-signal" viewBox="0 0 24 24"><g fill="currentColor"><rect x="2" y="14" width="3" height="6" rx="1"/><rect x="7" y="11" width="3" height="9" rx="1"/><rect x="12" y="7" width="3" height="13" rx="1"/><rect x="17" y="3" width="3" height="17" rx="1"/></g></symbol>
+  <symbol id="i-wifi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 8.5a16 16 0 0 1 20 0"/><path d="M5 12a11 11 0 0 1 14 0"/><path d="M8.5 15.5a6 6 0 0 1 7 0"/><circle cx="12" cy="19" r="1" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-battery" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="7" width="18" height="10" rx="2.5"/><rect x="4" y="9" width="12" height="6" rx="1" fill="currentColor" stroke="none"/><path d="M22 10v4" stroke-linecap="round"/></symbol>
+  <symbol id="i-speaker" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 9.5h3l4.5-3.5v12L7 14.5H4z"/><path d="M16 9a4 4 0 0 1 0 6" stroke-linecap="round"/><path d="M18.5 6.5a8 8 0 0 1 0 11" stroke-linecap="round"/></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z"/></symbol>
+  <symbol id="i-book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 6.5C10.5 5 8 4.5 4.5 5v13c3.5-.5 6 0 7.5 1.5 1.5-1.5 4-2 7.5-1.5V5C16 4.5 13.5 5 12 6.5z"/><path d="M12 6.5v13"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 5h16v11H9l-4 3.5V16H4z"/></symbol>
+  <symbol id="i-note" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M5 4h10l4 4v12H5z"/><path d="M15 4v4h4M8.5 12.5h7M8.5 16h5"/></symbol>
+  <symbol id="i-camera" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 8h3l1.5-2h7L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.2"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="9.5" rx="2.5"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/></symbol>
+  <symbol id="i-mic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3"/></symbol>
+  <symbol id="i-mic-fill" viewBox="0 0 24 24"><path fill="currentColor" d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3z"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M5.5 11a6.5 6.5 0 0 0 13 0M12 18v3"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 10 17l9-10"/></symbol>
+  <symbol id="i-chevU" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 14l6-6 6 6"/></symbol>
+  <symbol id="i-chevR" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-3.8-3.8"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path fill="currentColor" d="M7 5.5v13a1 1 0 0 0 1.5.87l11-6.5a1 1 0 0 0 0-1.74l-11-6.5A1 1 0 0 0 7 5.5z"/></symbol>
+  <symbol id="i-chevD" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 10l6 6 6-6"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 17l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></symbol>
+  <symbol id="i-star-fill" viewBox="0 0 24 24"><path fill="currentColor" d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 17l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L18.5 9.5l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14M9.5 7V5h5v2M6.5 7l1 12h9l1-12"/></symbol>
+</svg>
+
+<header>
+  <h1>틈새 중국어 — 화면 시안</h1>
+  <p>파스텔 무드 · 크림 배경 · 둥근 카드 · Cafe24 써라운드</p>
+</header>
+
+<div class="wrap">
+
+  <!-- 1. 홈 -->
+  <div class="col">
+    <div class="phone"><div class="screen">
+      <div class="pill"></div>
+      <div class="status"><span>9:41</span>
+        <span class="ic"><svg><use href="#i-signal"/></svg><svg><use href="#i-wifi"/></svg><svg><use href="#i-battery"/></svg></span></div>
+      <div class="appbar"><h2>오늘의 학습</h2></div>
+      <div class="body">
+        <div style="height:6px"></div>
+        <!-- 오늘의 단어: 매일 랜덤 단어 + 그 단어 뜻에 맞는 사진 -->
+        <div style="position:relative;height:158px;border-radius:18px;overflow:hidden;margin-bottom:16px;
+             background:linear-gradient(135deg,#4A3A6E,#2C2048);border:1px solid var(--line-p)">
+          <img src="https://images.unsplash.com/photo-1455390582262-044cdead277a?w=800&q=70"
+               onerror="this.style.display='none'"
+               style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"/>
+          <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(20,10,40,.1),rgba(25,12,55,.78))"></div>
+          <div style="position:absolute;left:16px;bottom:14px;color:#fff">
+            <div style="font-size:11px;letter-spacing:1.5px;opacity:.85">오늘의 단어</div>
+            <div class="han" style="font-size:30px;font-weight:600;margin:3px 0 2px">圆珠笔</div>
+            <div style="font-size:13px;opacity:.92">yuánzhūbǐ · 볼펜</div>
+          </div>
+        </div>
+        <div class="qrow"><span class="chip" style="background:var(--peach-s);color:var(--peach)"><svg><use href="#i-camera"/></svg></span><span class="lbl">단어·회화 추가</span><span class="chev"><svg width="16" height="16"><use href="#i-chevR"/></svg></span></div>
+        <div class="qrow"><span class="chip" style="background:var(--blue-s);color:var(--blue)"><svg><use href="#i-search"/></svg></span><span class="lbl">단어찾기 · 품사별</span><span class="chev"><svg width="16" height="16"><use href="#i-chevR"/></svg></span></div>
+      </div>
+      <nav class="nav">
+        <a class="on"><svg><use href="#i-home"/></svg>홈</a>
+        <a><svg><use href="#i-book"/></svg>단어장</a>
+        <a><svg><use href="#i-chat"/></svg>회화</a>
+        <a><svg><use href="#i-star"/></svg>즐겨찾기</a>
+      </nav>
+    </div></div>
+    <div class="cap"><b>홈</b><span>진도 · 빠른 진입</span></div>
+  </div>
+
+  <!-- 단어장 (한자만보기 모드) -->
+  <div class="col">
+    <div class="phone"><div class="screen">
+      <div class="pill"></div>
+      <div class="status"><span>9:41</span>
+        <span class="ic"><svg><use href="#i-signal"/></svg><svg><use href="#i-wifi"/></svg><svg><use href="#i-battery"/></svg></span></div>
+      <div class="appbar" style="display:flex;align-items:flex-end;justify-content:space-between;gap:8px">
+        <h2 style="white-space:nowrap">단어장</h2>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="dropdown"><span class="cv">3-1</span><svg><use href="#i-chevD"/></svg></div>
+          <button class="editbtn"><svg><use href="#i-edit"/></svg></button>
+        </div>
+      </div>
+      <div class="body">
+        <!-- 암기 토글 -->
+        <div class="seg">
+          <span>전체</span><span class="on">한자만</span><span>뜻만</span>
+        </div>
+        <div class="card" style="padding:4px 14px;margin-top:14px">
+          <!-- 한자만보기: 병음·품사·뜻은 가려지고(탭하면 공개) 한자만 보임 -->
+          <div class="vrow"><span class="han vhan">圆珠笔</span>
+            <div style="flex:1"><div class="mask">탭하면 공개</div></div>
+            <span class="talkbtn"><svg><use href="#i-speaker"/></svg></span>
+            <button class="starbtn on"><svg><use href="#i-star-fill"/></svg></button></div>
+          <div class="vrow"><span class="han vhan">啤酒</span>
+            <div style="flex:1"><div class="mask"></div></div>
+            <span class="talkbtn"><svg><use href="#i-speaker"/></svg></span>
+            <button class="starbtn"><svg><use href="#i-star"/></svg></button></div>
+          <!-- 공개된 행 예시 (다중 품사: 瓶 = 양사·명사) -->
+          <div class="vrow"><span class="han vhan">瓶</span>
+            <div style="flex:1"><div><span class="posbox po-m">양</span><span class="posbox po-n">명</span><span class="vmean">병</span></div><div class="vpin">píng</div></div>
+            <span class="talkbtn"><svg><use href="#i-speaker"/></svg></span>
+            <button class="starbtn on"><svg><use href="#i-star-fill"/></svg></button></div>
+          <div class="vrow"><span class="han vhan">一共</span>
+            <div style="flex:1"><div><span class="posbox po-adv">부</span><span class="vmean">모두</span></div><div class="vpin">yígòng</div></div>
+            <span class="talkbtn"><svg><use href="#i-speaker"/></svg></span>
+            <button class="starbtn"><svg><use href="#i-star"/></svg></button></div>
+        </div>
+        <div class="sub small" style="text-align:center;margin-top:12px">한자만 보고 뜻을 떠올린 뒤 탭하세요</div>
+      </div>
+      <nav class="nav">
+        <a><svg><use href="#i-home"/></svg>홈</a>
+        <a class="on"><svg><use href="#i-book"/></svg>단어장</a>
+        <a><svg><use href="#i-chat"/></svg>회화</a>
+        <a><svg><use href="#i-star"/></svg>즐겨찾기</a>
+      </nav>
+    </div></div>
+    <div class="cap"><b>단어장 · 한자만보기</b><span>한자·병음·품사·뜻 · 암기 가리기 토글</span></div>
+  </div>
+
+  <!-- 단어장 · 수정(편집) 모드 -->
+  <div class="col">
+    <div class="phone"><div class="screen">
+      <div class="pill"></div>
+      <div class="status"><span>9:41</span>
+        <span class="ic"><svg><use href="#i-signal"/></svg><svg><use href="#i-wifi"/></svg><svg><use href="#i-battery"/></svg></span></div>
+      <div class="appbar" style="display:flex;align-items:flex-end;justify-content:space-between;gap:8px">
+        <h2 style="white-space:nowrap">단어장 수정</h2>
+        <button class="playall" style="background:var(--purple)">완료</button>
+      </div>
+      <div class="body">
+        <div class="sub small" style="margin-bottom:8px">3-1 · 행을 삭제하거나 새 단어를 추가하세요</div>
+        <div class="card" style="padding:4px 14px">
+          <div class="vrow"><span class="han vhan">圆珠笔</span>
+            <div style="flex:1"><div><span class="posbox po-n">명</span><span class="vmean">볼펜</span></div><div class="vpin">yuánzhūbǐ</div></div>
+            <button class="delbtn"><svg><use href="#i-trash"/></svg></button></div>
+          <div class="vrow"><span class="han vhan">啤酒</span>
+            <div style="flex:1"><div><span class="posbox po-n">명</span><span class="vmean">맥주</span></div><div class="vpin">píjiǔ</div></div>
+            <button class="delbtn"><svg><use href="#i-trash"/></svg></button></div>
+          <div class="vrow"><span class="han vhan">瓶</span>
+            <div style="flex:1"><div><span class="posbox po-m">양</span><span class="posbox po-n">명</span><span class="vmean">병</span></div><div class="vpin">píng</div></div>
+            <button class="delbtn"><svg><use href="#i-trash"/></svg></button></div>
+        </div>
+        <div class="addrow"><svg><use href="#i-plus"/></svg> 단어 추가</div>
+      </div>
+      <nav class="nav">
+        <a><svg><use href="#i-home"/></svg>홈</a>
+        <a class="on"><svg><use href="#i-book"/></svg>단어장</a>
+        <a><svg><use href="#i-chat"/></svg>회화</a>
+        <a><svg><use href="#i-star"/></svg>즐겨찾기</a>
+      </nav>
+    </div></div>
+    <div class="cap"><b>단어장 · 수정</b><span>연필 버튼 → 삭제(휴지통) / 단어 추가</span></div>
+  </div>
+
+  <!-- 회화 · 수정(편집) 모드 -->
+  <div class="col">
+    <div class="phone"><div class="screen">
+      <div class="pill"></div>
+      <div class="status"><span>9:41</span>
+        <span class="ic"><svg><use href="#i-signal"/></svg><svg><use href="#i-wifi"/></svg><svg><use href="#i-battery"/></svg></span></div>
+      <div class="appbar" style="display:flex;align-items:flex-end;justify-content:space-between;gap:8px">
+        <h2 style="white-space:nowrap">회화 수정</h2>
+        <button class="playall" style="background:var(--purple)">완료</button>
+      </div>
+      <div class="body">
+        <div class="sub small" style="margin-bottom:8px">3-1 · 문장을 삭제하거나 새 문장을 추가하세요</div>
+        <div>
+          <div class="turn">
+            <span class="who" style="background:var(--purple-s);color:var(--purple)">A</span>
+            <div class="tx"><div class="han">你好！你叫什么名字？</div><div class="pin">Nǐ hǎo! Nǐ jiào shénme míngzi?</div></div>
+            <button class="delbtn"><svg><use href="#i-trash"/></svg></button>
+          </div>
+          <div class="turn">
+            <span class="who" style="background:#DCF1EA;color:#2E8B6B">B</span>
+            <div class="tx"><div class="han">我叫李钟文。</div><div class="pin">Wǒ jiào Lǐ Zhōngwén.</div></div>
+            <button class="delbtn"><svg><use href="#i-trash"/></svg></button>
+          </div>
+          <div class="turn">
+            <span class="who" style="background:var(--purple-s);color:var(--purple)">A</span>
+            <div class="tx"><div class="han">我猜你一定是韩国人。</div><div class="pin">Wǒ cāi nǐ yídìng shì Hánguó rén.</div></div>
+            <button class="delbtn"><svg><use href="#i-trash"/></svg></button>
+          </div>
+        </div>
+        <div class="addrow"><svg><use href="#i-plus"/></svg> 문장 추가</div>
+      </div>
+      <nav class="nav">
+        <a><svg><use href="#i-home"/></svg>홈</a>
+        <a><svg><use href="#i-book"/></svg>단어장</a>
+        <a class="on"><svg><use href="#i-chat"/></svg>회화</a>
+        <a><svg><use href="#i-star"/></svg>즐겨찾기</a>
+      </nav>
+    </div></div>
+    <div class="cap"><b>회화 · 수정</b><span>연필 버튼 → 문장 삭제 / 추가</span></div>
+  </div>
+
+  <!-- 회화 (교재 그대로) -->
+  <div class="col">
+    <div class="phone"><div class="screen">
+      <div class="pill"></div>
+      <div class="status"><span>9:41</span>
+        <span class="ic"><svg><use href="#i-signal"/></svg><svg><use href="#i-wifi"/></svg><svg><use href="#i-battery"/></svg></span></div>
+      <div class="appbar" style="display:flex;align-items:flex-end;justify-content:space-between;gap:10px">
+        <h2 style="white-space:nowrap">회화 배우기</h2>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="dropdown"><span class="cv">3-1</span><svg><use href="#i-chevD"/></svg></div>
+          <button class="editbtn"><svg><use href="#i-edit"/></svg></button>
+        </div>
+      </div>
+      <div class="body" style="overflow-y:auto">
+        <div class="sub" style="font-size:12px;margin-bottom:8px">① 왜 중국어를 배우러 왔나요? · 01-02</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <div class="langtoggle"><span class="on">중국어</span><span>번역</span></div>
+          <button class="playall"><svg><use href="#i-play"/></svg> 전체 듣기</button>
+        </div>
+        <div>
+          <div class="turn">
+            <span class="who" style="background:var(--purple-s);color:var(--purple)">A</span>
+            <div class="tx"><div class="han">你好！你叫什么名字？</div><div class="pin">Nǐ hǎo! Nǐ jiào shénme míngzi?</div></div>
+            <button class="talkbtn"><svg><use href="#i-speaker"/></svg></button>
+          </div>
+          <div class="turn">
+            <span class="who" style="background:#DCF1EA;color:#2E8B6B">B</span>
+            <div class="tx"><div class="han">我叫李钟文。</div><div class="pin">Wǒ jiào Lǐ Zhōngwén.</div></div>
+            <button class="talkbtn"><svg><use href="#i-speaker"/></svg></button>
+          </div>
+          <div class="turn">
+            <span class="who" style="background:var(--purple-s);color:var(--purple)">A</span>
+            <div class="tx"><div class="han">你好，李钟文！我猜你一定是韩国人。</div><div class="pin">Nǐ hǎo, Lǐ Zhōngwén! Wǒ cāi nǐ yídìng shì Hánguó rén.</div></div>
+            <button class="talkbtn"><svg><use href="#i-speaker"/></svg></button>
+          </div>
+          <div class="turn">
+            <span class="who" style="background:#DCF1EA;color:#2E8B6B">B</span>
+            <div class="tx"><div class="han">你呢？</div><div class="pin">Nǐ ne?</div></div>
+            <button class="talkbtn"><svg><use href="#i-speaker"/></svg></button>
+          </div>
+          <div class="turn">
+            <span class="who" style="background:var(--purple-s);color:var(--purple)">A</span>
+            <div class="tx"><div class="han">我叫飞龙，法国人，是大学生。</div><div class="pin">Wǒ jiào Fēilóng, Fǎguó rén, shì dàxuéshēng.</div></div>
+            <button class="talkbtn"><svg><use href="#i-speaker"/></svg></button>
+          </div>
+          <div class="turn">
+            <span class="who" style="background:#DCF1EA;color:#2E8B6B">B</span>
+            <div class="tx"><div class="han">你为什么来学汉语？</div><div class="pin">Nǐ wèishénme lái xué Hànyǔ?</div></div>
+            <button class="talkbtn"><svg><use href="#i-speaker"/></svg></button>
+          </div>
+          <div class="turn">
+            <span class="who" style="background:var(--purple-s);color:var(--purple)">A</span>
+            <div class="tx"><div class="han">去法国的中国人越来越多，我希望以后做汉语翻译。你呢？</div><div class="pin">Qù Fǎguó de Zhōngguó rén yuè lái yuè duō, wǒ xīwàng yǐhòu zuò Hànyǔ fānyì. Nǐ ne?</div></div>
+            <button class="talkbtn"><svg><use href="#i-speaker"/></svg></button>
+          </div>
+          <div class="turn">
+            <span class="who" style="background:#DCF1EA;color:#2E8B6B">B</span>
+            <div class="tx"><div class="han">是公司派我来学习的。我要先在这儿学习半年，然后在中国工作。</div><div class="pin">Shì gōngsī pài wǒ lái xuéxí de. Wǒ yào xiān zài zhèr xuéxí bàn nián, ránhòu zài Zhōngguó gōngzuò.</div></div>
+            <button class="talkbtn"><svg><use href="#i-speaker"/></svg></button>
+          </div>
+        </div>
+      </div>
+      <nav class="nav">
+        <a><svg><use href="#i-home"/></svg>홈</a>
+        <a><svg><use href="#i-book"/></svg>단어장</a>
+        <a class="on"><svg><use href="#i-chat"/></svg>회화</a>
+        <a><svg><use href="#i-star"/></svg>즐겨찾기</a>
+      </nav>
+    </div></div>
+    <div class="cap"><b>회화 · 중국어</b><span>화자 태그 · 한 줄 듣기 · 전체 듣기 · 우측 [중국어]/[번역] 전환</span></div>
+  </div>
+
+  <!-- 회화 (번역 보기) -->
+  <div class="col">
+    <div class="phone"><div class="screen">
+      <div class="pill"></div>
+      <div class="status"><span>9:41</span>
+        <span class="ic"><svg><use href="#i-signal"/></svg><svg><use href="#i-wifi"/></svg><svg><use href="#i-battery"/></svg></span></div>
+      <div class="appbar" style="display:flex;align-items:flex-end;justify-content:space-between;gap:10px">
+        <h2 style="white-space:nowrap">회화 배우기</h2>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="dropdown"><span class="cv">3-1</span><svg><use href="#i-chevD"/></svg></div>
+          <button class="editbtn"><svg><use href="#i-edit"/></svg></button>
+        </div>
+      </div>
+      <div class="body" style="overflow-y:auto">
+        <div class="sub" style="font-size:12px;margin-bottom:8px">① 왜 중국어를 배우러 왔나요? · 01-02</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <div class="langtoggle"><span>중국어</span><span class="on">번역</span></div>
+          <button class="playall"><svg><use href="#i-play"/></svg> 전체 듣기</button>
+        </div>
+        <div>
+          <div class="turn">
+            <span class="who" style="background:var(--purple-s);color:var(--purple)">A</span>
+            <div class="tx"><div style="font-size:14px;color:var(--ink);line-height:1.45">안녕! 너 이름이 뭐야?</div></div>
+            <button class="talkbtn"><svg><use href="#i-speaker"/></svg></button>
+          </div>
+          <div class="turn">
+            <span class="who" style="background:#DCF1EA;color:#2E8B6B">B</span>
+            <div class="tx"><div style="font-size:14px;color:var(--ink);line-height:1.45">내 이름은 이종원이야.</div></div>
+            <button class="talkbtn"><svg><use href="#i-speaker"/></svg></button>
+          </div>
+          <div class="turn">
+            <span class="who" style="background:var(--purple-s);color:var(--purple)">A</span>
+            <div class="tx"><div style="font-size:14px;color:var(--ink);line-height:1.45">안녕 이종원! 너 분명 한국 사람이지.</div></div>
+            <button class="talkbtn"><svg><use href="#i-speaker"/></svg></button>
+          </div>
+          <div class="turn">
+            <span class="who" style="background:#DCF1EA;color:#2E8B6B">B</span>
+            <div class="tx"><div style="font-size:14px;color:var(--ink);line-height:1.45">너는?</div></div>
+            <button class="talkbtn"><svg><use href="#i-speaker"/></svg></button>
+          </div>
+          <div class="turn">
+            <span class="who" style="background:var(--purple-s);color:var(--purple)">A</span>
+            <div class="tx"><div style="font-size:14px;color:var(--ink);line-height:1.45">난 페이롱, 프랑스 사람이고 대학생이야.</div></div>
+            <button class="talkbtn"><svg><use href="#i-speaker"/></svg></button>
+          </div>
+          <div class="turn">
+            <span class="who" style="background:#DCF1EA;color:#2E8B6B">B</span>
+            <div class="tx"><div style="font-size:14px;color:var(--ink);line-height:1.45">너는 왜 중국어를 배우러 왔어?</div></div>
+            <button class="talkbtn"><svg><use href="#i-speaker"/></svg></button>
+          </div>
+        </div>
+      </div>
+      <nav class="nav">
+        <a><svg><use href="#i-home"/></svg>홈</a>
+        <a><svg><use href="#i-book"/></svg>단어장</a>
+        <a class="on"><svg><use href="#i-chat"/></svg>회화</a>
+        <a><svg><use href="#i-star"/></svg>즐겨찾기</a>
+      </nav>
+    </div></div>
+    <div class="cap"><b>회화 · 번역</b><span>[번역] 누르면 한국어 회화로 전환</span></div>
+  </div>
+
+  <!-- 회화 (본문형: 화자 없이 쭉 이어진 지문) -->
+  <div class="col">
+    <div class="phone"><div class="screen">
+      <div class="pill"></div>
+      <div class="status"><span>9:41</span>
+        <span class="ic"><svg><use href="#i-signal"/></svg><svg><use href="#i-wifi"/></svg><svg><use href="#i-battery"/></svg></span></div>
+      <div class="appbar" style="display:flex;align-items:flex-end;justify-content:space-between;gap:10px">
+        <h2 style="white-space:nowrap">회화 배우기</h2>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="dropdown"><span class="cv">3-2</span><svg><use href="#i-chevD"/></svg></div>
+          <button class="editbtn"><svg><use href="#i-edit"/></svg></button>
+        </div>
+      </div>
+      <div class="body" style="overflow-y:auto">
+        <div class="sub" style="font-size:12px;margin-bottom:8px">② 내 친구 飞龙 · 본문 · 02-01</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <div class="langtoggle"><span class="on">중국어</span><span>번역</span></div>
+          <button class="playall"><svg><use href="#i-play"/></svg> 전체 듣기</button>
+        </div>
+        <div>
+          <div class="turn">
+            <div class="tx"><div class="han">我叫飞龙，是法国人。</div><div class="pin">Wǒ jiào Fēilóng, shì Fǎguó rén.</div></div>
+            <button class="talkbtn"><svg><use href="#i-speaker"/></svg></button>
+          </div>
+          <div class="turn">
+            <div class="tx"><div class="han">我在大学学习汉语。</div><div class="pin">Wǒ zài dàxué xuéxí Hànyǔ.</div></div>
+            <button class="talkbtn"><svg><use href="#i-speaker"/></svg></button>
+          </div>
+          <div class="turn">
+            <div class="tx"><div class="han">去法国的中国人越来越多。</div><div class="pin">Qù Fǎguó de Zhōngguó rén yuè lái yuè duō.</div></div>
+            <button class="talkbtn"><svg><use href="#i-speaker"/></svg></button>
+          </div>
+          <div class="turn">
+            <div class="tx"><div class="han">所以我希望以后做汉语翻译。</div><div class="pin">Suǒyǐ wǒ xīwàng yǐhòu zuò Hànyǔ fānyì.</div></div>
+            <button class="talkbtn"><svg><use href="#i-speaker"/></svg></button>
+          </div>
+        </div>
+      </div>
+      <nav class="nav">
+        <a><svg><use href="#i-home"/></svg>홈</a>
+        <a><svg><use href="#i-book"/></svg>단어장</a>
+        <a class="on"><svg><use href="#i-chat"/></svg>회화</a>
+        <a><svg><use href="#i-star"/></svg>즐겨찾기</a>
+      </nav>
+    </div></div>
+    <div class="cap"><b>회화 · 본문형</b><span>화자 없이 쭉 이어진 지문 그대로 (A/B 없음)</span></div>
+  </div>
+
+
+  <!-- 6. 단어찾기 (품사별) -->
+  <div class="col">
+    <div class="phone"><div class="screen">
+      <div class="pill"></div>
+      <div class="status"><span>9:41</span>
+        <span class="ic"><svg><use href="#i-signal"/></svg><svg><use href="#i-wifi"/></svg><svg><use href="#i-battery"/></svg></span></div>
+      <div class="appbar"><div class="kicker">등록한 모든 단어에서</div><h2>단어찾기</h2></div>
+      <div class="body">
+        <div class="searchbar"><svg><use href="#i-search"/></svg><span class="ph">중국어·병음·한글로 검색</span></div>
+        <div class="posfilter">
+          <span class="on">명사</span><span>형용사</span><span>부사</span><span>양사</span><span>동사</span><span>대명사</span>
+        </div>
+        <div class="card" style="padding:4px 14px;margin-top:14px">
+          <div class="vrow"><span class="han vhan">圆珠笔</span>
+            <div style="flex:1"><div><span class="posbox po-n">명</span><span class="vmean">볼펜</span></div><div class="vpin">yuánzhūbǐ</div></div>
+            <span class="talkbtn"><svg><use href="#i-speaker"/></svg></span>
+            <button class="starbtn on"><svg><use href="#i-star-fill"/></svg></button></div>
+          <div class="vrow"><span class="han vhan">啤酒</span>
+            <div style="flex:1"><div><span class="posbox po-n">명</span><span class="vmean">맥주</span></div><div class="vpin">píjiǔ</div></div>
+            <span class="talkbtn"><svg><use href="#i-speaker"/></svg></span>
+            <button class="starbtn"><svg><use href="#i-star"/></svg></button></div>
+          <div class="vrow"><span class="han vhan">旅行</span>
+            <div style="flex:1"><div><span class="posbox po-n">명</span><span class="vmean">여행</span></div><div class="vpin">lǚxíng</div></div>
+            <span class="talkbtn"><svg><use href="#i-speaker"/></svg></span>
+            <button class="starbtn"><svg><use href="#i-star"/></svg></button></div>
+          <div class="vrow"><span class="han vhan">名字</span>
+            <div style="flex:1"><div><span class="posbox po-n">명</span><span class="vmean">이름</span></div><div class="vpin">míngzi</div></div>
+            <span class="talkbtn"><svg><use href="#i-speaker"/></svg></span>
+            <button class="starbtn"><svg><use href="#i-star"/></svg></button></div>
+        </div>
+        <div class="sub small" style="text-align:center;margin-top:12px">명사 24개 · 단원 상관없이 모아보기</div>
+      </div>
+      <nav class="nav">
+        <a><svg><use href="#i-home"/></svg>홈</a>
+        <a class="on"><svg><use href="#i-book"/></svg>단어장</a>
+        <a><svg><use href="#i-chat"/></svg>회화</a>
+        <a><svg><use href="#i-star"/></svg>즐겨찾기</a>
+      </nav>
+    </div></div>
+    <div class="cap"><b>단어찾기 · 품사별</b><span>명사 / 형용사 / 부사 / 양사 모아보기</span></div>
+  </div>
+
+  <!-- 즐겨찾기 모아보기 -->
+  <div class="col">
+    <div class="phone"><div class="screen">
+      <div class="pill"></div>
+      <div class="status"><span>9:41</span>
+        <span class="ic"><svg><use href="#i-signal"/></svg><svg><use href="#i-wifi"/></svg><svg><use href="#i-battery"/></svg></span></div>
+      <div class="appbar"><div class="kicker">★ 표시한 단어만</div><h2>즐겨찾기</h2></div>
+      <div class="body">
+        <div class="seg"><span class="on">전체</span><span>한자만</span><span>뜻만</span></div>
+        <div class="card" style="padding:4px 14px;margin-top:14px">
+          <div class="vrow"><span class="han vhan">圆珠笔</span>
+            <div style="flex:1"><div><span class="posbox po-n">명</span><span class="vmean">볼펜</span></div><div class="vpin">yuánzhūbǐ</div></div>
+            <span class="talkbtn"><svg><use href="#i-speaker"/></svg></span>
+            <button class="starbtn on"><svg><use href="#i-star-fill"/></svg></button></div>
+          <div class="vrow"><span class="han vhan">瓶</span>
+            <div style="flex:1"><div><span class="posbox po-m">양</span><span class="posbox po-n">명</span><span class="vmean">병</span></div><div class="vpin">píng</div></div>
+            <span class="talkbtn"><svg><use href="#i-speaker"/></svg></span>
+            <button class="starbtn on"><svg><use href="#i-star-fill"/></svg></button></div>
+          <div class="vrow"><span class="han vhan">羊肉串</span>
+            <div style="flex:1"><div><span class="posbox po-n">명</span><span class="vmean">양꼬치</span></div><div class="vpin">yángròuchuàn</div></div>
+            <span class="talkbtn"><svg><use href="#i-speaker"/></svg></span>
+            <button class="starbtn on"><svg><use href="#i-star-fill"/></svg></button></div>
+        </div>
+        <div class="sub small" style="text-align:center;margin-top:12px">★ 단어만 모아서 가리기 연습</div>
+      </div>
+      <nav class="nav">
+        <a><svg><use href="#i-home"/></svg>홈</a>
+        <a><svg><use href="#i-book"/></svg>단어장</a>
+        <a><svg><use href="#i-chat"/></svg>회화</a>
+        <a class="on"><svg><use href="#i-star"/></svg>즐겨찾기</a>
+      </nav>
+    </div></div>
+    <div class="cap"><b>즐겨찾기</b><span>★ 단어만 모아 연습</span></div>
+  </div>
+
+  <!-- 단어·회화 추가 (제목 지정 + 촬영/직접입력) -->
+  <div class="col">
+    <div class="phone"><div class="screen">
+      <div class="pill"></div>
+      <div class="status"><span>9:41</span>
+        <span class="ic"><svg><use href="#i-signal"/></svg><svg><use href="#i-wifi"/></svg><svg><use href="#i-battery"/></svg></span></div>
+      <div class="appbar"><div class="kicker">새 단어·회화 등록</div><h2>추가하기</h2></div>
+      <div class="body">
+        <div class="sub small" style="margin-bottom:6px">제목 (단원)</div>
+        <div class="field"><span class="cv" style="color:var(--purple);font-size:15px">3-1</span><span class="sub" style="font-size:12px;margin-left:auto">예: 3-1, 3-2</span></div>
+        <div class="seg" style="margin-top:14px"><span class="on">교재 촬영</span><span>직접 입력</span></div>
+        <div class="sub small" style="margin:14px 0 6px">직접 입력 — 뜻 / 병음 / 한자 (탭 구분 붙여넣기)</div>
+        <div class="paste">다음에	xiàcì	下次
+미안해	bùhǎoyìsi	不好意思
+물론이죠	dāngrán kěyǐ	当然可以
+사장님	lǎobǎn	老板
+양꼬치	yángròuchuàn	羊肉串</div>
+        <div class="card" style="margin-top:12px;padding:4px 16px">
+          <div class="vrow" style="padding:9px 0"><span class="han" style="font-size:18px;min-width:54px">下次</span>
+            <div style="flex:1"><span class="vmean">다음에</span><div class="vpin">xiàcì</div></div>
+            <span class="sub small">미리보기</span></div>
+          <div class="vrow" style="padding:9px 0"><span class="han" style="font-size:18px;min-width:54px">老板</span>
+            <div style="flex:1"><span class="vmean">사장님</span><div class="vpin">lǎobǎn</div></div></div>
+        </div>
+        <button class="playall" style="width:100%;justify-content:center;margin-top:14px;background:var(--purple)"><svg><use href="#i-plus"/></svg> 5개 단어 등록</button>
+      </div>
+    </div></div>
+    <div class="cap"><b>추가하기</b><span>제목(3-1) 지정 · 촬영 / 직접 입력</span></div>
+  </div>
+
+</div>
+</body>
+</html>

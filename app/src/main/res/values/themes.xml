@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Compose drives the real UI theme (ui/theme). This is the framework-level
+         activity theme, kept dependency-free (no Material Components library needed). -->
+    <style name="Theme.ChineseLockApp" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@android:color/white</item>
+    </style>
+</resources>
