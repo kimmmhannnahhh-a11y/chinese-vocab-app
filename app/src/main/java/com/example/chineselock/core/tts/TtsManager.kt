@@ -15,12 +15,16 @@ class TtsManager @Inject constructor(
     @Volatile var isChineseAvailable: Boolean = false
         private set
 
-    private val tts = TextToSpeech(context) { status ->
-        if (status == TextToSpeech.SUCCESS) {
-            val result = tts.setLanguage(Locale.CHINA)
-            isChineseAvailable = result != TextToSpeech.LANG_MISSING_DATA &&
-                result != TextToSpeech.LANG_NOT_SUPPORTED
-            tts.setSpeechRate(0.9f) // 학습용으로 살짝 느리게
+    private val tts: TextToSpeech
+
+    init {
+        tts = TextToSpeech(context) { status ->
+            if (status == TextToSpeech.SUCCESS) {
+                val result = tts.setLanguage(Locale.CHINA)
+                isChineseAvailable = result != TextToSpeech.LANG_MISSING_DATA &&
+                    result != TextToSpeech.LANG_NOT_SUPPORTED
+                tts.setSpeechRate(0.9f) // 학습용으로 살짝 느리게
+            }
         }
     }
 
