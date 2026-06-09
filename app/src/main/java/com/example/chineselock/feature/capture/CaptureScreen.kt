@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -41,6 +42,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -58,13 +60,22 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.chineselock.ui.PosBoxes
+import com.example.chineselock.ui.SpeakerTag
 import com.example.chineselock.ui.theme.AppColors
 import com.google.mlkit.vision.common.InputImage
 
 @Composable
-fun CaptureScreen(onBack: () -> Unit, vm: CaptureViewModel = hiltViewModel()) {
+fun CaptureScreen(
+    onBack: () -> Unit,
+    mode: CaptureMode = CaptureMode.VOCAB,
+    vm: CaptureViewModel = hiltViewModel(),
+) {
     val ui by vm.ui.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    LaunchedEffect(mode) { vm.setMode(mode) }
+
+    val isVocab = ui.mode == CaptureMode.VOCAB
+    val unitLabel = if (isVocab) "단어" else "문장"
 
     var hasPermission by remember {
         mutableStateOf(
@@ -80,7 +91,12 @@ fun CaptureScreen(onBack: () -> Unit, vm: CaptureViewModel = hiltViewModel()) {
         when (ui.phase) {
             CaptureViewModel.Phase.CAMERA ->
                 if (hasPermission) {
-                    CameraView(onCaptured = vm::onImageCaptured, onBack = onBack)
+                    CameraView(
+                        guide = if (isVocab) "단어 페이지를 화면에 꽉 차게 맞추고 촬영하세요"
+                                else "회화 페이지를 화면에 꽉 차게 맞추고 촬영하세요",
+                        onCaptured = vm::onImageCaptured,
+                        onBack = onBack,
+                    )
                 } else {
                     PermissionPrompt(
                         onRequest = { permLauncher.launch(Manifest.permission.CAMERA) },
@@ -97,7 +113,7 @@ fun CaptureScreen(onBack: () -> Unit, vm: CaptureViewModel = hiltViewModel()) {
                 onRetake = vm::retake,
                 onSave = {
                     vm.save(System.currentTimeMillis()) { n ->
-                        Toast.makeText(context, "${n}개 단어를 등록했어요", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "${n}개 ${unitLabel}을 등록했어요", Toast.LENGTH_SHORT).show()
                         if (n > 0) onBack()
                     }
                 },
@@ -113,7 +129,7 @@ fun CaptureScreen(onBack: () -> Unit, vm: CaptureViewModel = hiltViewModel()) {
 }
 
 @Composable
-private fun CameraView(onCaptured: (InputImage) -> Unit, onBack: () -> Unit) {
+private fun CameraView(guide: String, onCaptured: (InputImage) -> Unit, onBack: () -> Unit) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val imageCapture = remember { ImageCapture.Builder().build() }
@@ -151,7 +167,7 @@ private fun CameraView(onCaptured: (InputImage) -> Unit, onBack: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
-                "단어 페이지를 화면에 꽉 차게 맞추고 촬영하세요",
+                guide,
                 color = Color.White, fontSize = 12.sp,
                 modifier = Modifier.padding(bottom = 16.dp),
             )
@@ -203,7 +219,7 @@ private fun ProcessingView() {
     ) {
         CircularProgressIndicator(color = AppColors.Purple)
         Spacer(Modifier.height(20.dp))
-        Text("글자를 읽고 단어를 정리하는 중…", color = AppColors.Sub, fontSize = 14.sp)
+        Text("글자를 읽고 정리하는 중…", color = AppColors.Sub, fontSize = 14.sp)
     }
 }
 
@@ -215,6 +231,8 @@ private fun ReviewView(
     onRetake: () -> Unit,
     onSave: () -> Unit,
 ) {
+    val isVocab = ui.mode == CaptureMode.VOCAB
+    val unit = if (isVocab) "단어" else "문장"
     Column(
         Modifier.fillMaxSize().padding(horizontal = 16.dp).verticalScroll(rememberScrollState())
     ) {
@@ -230,32 +248,54 @@ private fun ReviewView(
         )
 
         Text(
-            "인식된 단어 ${ui.items.size}개 — 틀린 항목은 X로 빼고 등록하세요",
+            "인식된 $unit ${ui.count}개 — 틀린 항목은 X로 빼고 등록하세요",
             color = AppColors.Sub, fontSize = 11.sp, modifier = Modifier.padding(top = 14.dp, bottom = 4.dp),
         )
         Column(
             Modifier.fillMaxWidth().border(1.dp, AppColors.Line, RoundedCornerShape(14.dp)).padding(horizontal = 14.dp),
         ) {
-            ui.items.forEachIndexed { index, item ->
-                Row(Modifier.fillMaxWidth().padding(vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(item.hanzi, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(end = 10.dp))
-                    Column(Modifier.weight(1f)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            PosBoxes(item.pos.joinToString("·").ifEmpty { null })
-                            Text(item.meaning, fontSize = 13.sp)
+            if (isVocab) {
+                ui.items.forEachIndexed { index, item ->
+                    Row(Modifier.fillMaxWidth().padding(vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(item.hanzi, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(end = 10.dp))
+                        Column(Modifier.weight(1f)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                PosBoxes(item.pos.joinToString("·").ifEmpty { null })
+                                Text(item.meaning, fontSize = 13.sp)
+                            }
+                            Text(item.pinyin, color = AppColors.Sub, fontSize = 11.sp)
                         }
-                        Text(item.pinyin, color = AppColors.Sub, fontSize = 11.sp)
+                        IconButton(onClick = { onRemove(index) }) {
+                            Icon(Icons.Filled.Close, "제외", tint = AppColors.Muted)
+                        }
                     }
-                    IconButton(onClick = { onRemove(index) }) {
-                        Icon(Icons.Filled.Close, "제외", tint = AppColors.Muted)
+                }
+            } else {
+                ui.lines.forEachIndexed { index, line ->
+                    val speaker = line.speaker
+                    val pinyin = line.pinyin
+                    Row(Modifier.fillMaxWidth().padding(vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
+                        if (!speaker.isNullOrBlank()) {
+                            SpeakerTag(speaker)
+                            Spacer(Modifier.width(8.dp))
+                        }
+                        Column(Modifier.weight(1f)) {
+                            Text(line.chinese, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                            if (!pinyin.isNullOrBlank()) {
+                                Text(pinyin, color = AppColors.Sub, fontSize = 11.sp)
+                            }
+                        }
+                        IconButton(onClick = { onRemove(index) }) {
+                            Icon(Icons.Filled.Close, "제외", tint = AppColors.Muted)
+                        }
                     }
                 }
             }
         }
 
         Spacer(Modifier.height(16.dp))
-        Button(onClick = onSave, enabled = ui.items.isNotEmpty(), modifier = Modifier.fillMaxWidth()) {
-            Text("${ui.items.size}개 단어 등록")
+        Button(onClick = onSave, enabled = ui.count > 0, modifier = Modifier.fillMaxWidth()) {
+            Text("${ui.count}개 $unit 등록")
         }
         Spacer(Modifier.height(8.dp))
         OutlinedButton(onClick = onRetake, modifier = Modifier.fillMaxWidth()) { Text("다시 찍기") }

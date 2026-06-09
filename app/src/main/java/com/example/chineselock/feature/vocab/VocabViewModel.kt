@@ -60,6 +60,16 @@ class VocabViewModel @Inject constructor(
     fun toggleFavorite(v: Vocab) = viewModelScope.launch { repo.setFavorite(v.id, !v.isFavorite) }
     fun delete(v: Vocab) = viewModelScope.launch { repo.deleteVocab(v.id) }
 
+    /** 현재 선택한 단원을 통째로 삭제(단어·회화 전부). 삭제 후 첫 단원 재선택. */
+    fun deleteCurrentUnit() {
+        val id = _selectedUnitId.value ?: return
+        viewModelScope.launch {
+            repo.deleteUnit(id)
+            _selectedUnitId.value = null   // init 콜렉터가 남은 첫 단원을 다시 선택
+            editMode.value = false
+        }
+    }
+
     fun addVocab(hanzi: String, pinyin: String, pos: List<String>, meaning: String) {
         val unitId = _selectedUnitId.value ?: return
         viewModelScope.launch {

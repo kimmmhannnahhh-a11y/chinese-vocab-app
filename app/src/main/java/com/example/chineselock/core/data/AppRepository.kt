@@ -34,6 +34,9 @@ class AppRepository @Inject constructor(
             ?: unitDao.insert(StudyUnit(book = book, lesson = lesson, title = "$book-$lesson", createdAt = now))
     }
 
+    /** 단원 통째로 삭제(단어·품사·회화 CASCADE). */
+    suspend fun deleteUnit(unitId: Long) = withContext(Dispatchers.IO) { unitDao.deleteById(unitId) }
+
     // --- 단어 ---
     fun observeVocab(unitId: Long): Flow<List<Vocab>> = vocabDao.observeByUnit(unitId)
     fun observeByPartOfSpeech(pos: String): Flow<List<Vocab>> = vocabDao.observeByPartOfSpeech(pos)
@@ -80,6 +83,7 @@ class AppRepository @Inject constructor(
     fun observeDialogue(unitId: Long): Flow<List<Dialogue>> = dialogueDao.observeByUnit(unitId)
     suspend fun deleteDialogue(id: Long) = withContext(Dispatchers.IO) { dialogueDao.deleteById(id) }
     suspend fun addDialogue(d: Dialogue): Long = withContext(Dispatchers.IO) { dialogueDao.insert(d) }
+    suspend fun addDialogueBatch(items: List<Dialogue>) = withContext(Dispatchers.IO) { dialogueDao.insertAll(items) }
 
     // --- 노트 ---
     fun observeNotes(): Flow<List<CustomNote>> = noteDao.observeAll()

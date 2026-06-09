@@ -40,6 +40,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -51,6 +52,8 @@ import com.example.chineselock.ui.StudyMode
 import com.example.chineselock.ui.VocabListRow
 import com.example.chineselock.ui.theme.AppColors
 
+private val DangerRed = Color(0xFFD14D4D)
+
 @Composable
 fun VocabScreen(vm: VocabViewModel = hiltViewModel()) {
     val units by vm.units.collectAsStateWithLifecycle()
@@ -61,6 +64,7 @@ fun VocabScreen(vm: VocabViewModel = hiltViewModel()) {
     val revealed by vm.revealed.collectAsStateWithLifecycle()
 
     var showAdd by remember { mutableStateOf(false) }
+    var showDeleteUnit by remember { mutableStateOf(false) }
     val title = units.firstOrNull { it.id == selectedId }?.title ?: "—"
 
     Surface(Modifier.fillMaxSize()) {
@@ -113,9 +117,39 @@ fun VocabScreen(vm: VocabViewModel = hiltViewModel()) {
                             Text("  단어 추가", color = AppColors.Purple, fontSize = 13.sp)
                         }
                     }
+                    if (selectedId != null) {
+                        item {
+                            Row(
+                                Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 20.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .border(1.dp, DangerRed.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                                    .clickable { showDeleteUnit = true }
+                                    .padding(11.dp),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Icon(Icons.Filled.DeleteOutline, null, tint = DangerRed, modifier = Modifier.size(16.dp))
+                                Text("  $title 단원 전체 삭제", color = DangerRed, fontSize = 13.sp)
+                            }
+                        }
+                    }
                 }
             }
         }
+    }
+
+    if (showDeleteUnit) {
+        AlertDialog(
+            onDismissRequest = { showDeleteUnit = false },
+            title = { Text("$title 단원 삭제") },
+            text = { Text("이 단원의 단어와 회화가 모두 삭제돼요. 되돌릴 수 없어요.") },
+            confirmButton = {
+                TextButton(onClick = { vm.deleteCurrentUnit(); showDeleteUnit = false }) {
+                    Text("전체 삭제", color = DangerRed)
+                }
+            },
+            dismissButton = { TextButton(onClick = { showDeleteUnit = false }) { Text("취소") } },
+        )
     }
 
     if (showAdd) {

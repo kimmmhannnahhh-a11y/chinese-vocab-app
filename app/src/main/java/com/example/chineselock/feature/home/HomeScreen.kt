@@ -13,8 +13,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -38,7 +39,8 @@ import com.example.chineselock.ui.theme.AppColors
 
 @Composable
 fun HomeScreen(
-    onAddClick: () -> Unit,
+    onAddVocab: () -> Unit,
+    onAddDialogue: () -> Unit,
     onSearchClick: () -> Unit,
     vm: HomeViewModel = hiltViewModel(),
 ) {
@@ -54,7 +56,9 @@ fun HomeScreen(
             )
             TodayWordCard(today)
             Spacer(Modifier.height(16.dp))
-            MenuRow(Icons.Filled.PhotoCamera, "단어·회화 추가", onAddClick)
+            MenuRow(Icons.AutoMirrored.Filled.MenuBook, "단어 추가 (교재 촬영·직접입력)", onAddVocab)
+            Spacer(Modifier.height(12.dp))
+            MenuRow(Icons.AutoMirrored.Filled.Chat, "회화 추가 (교재 촬영)", onAddDialogue)
             Spacer(Modifier.height(12.dp))
             MenuRow(Icons.Filled.Search, "단어찾기 · 품사별", onSearchClick)
         }
