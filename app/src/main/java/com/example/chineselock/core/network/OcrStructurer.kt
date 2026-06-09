@@ -41,7 +41,9 @@ class OcrStructurer @Inject constructor(
         json.decodeFromString(complete(TRANSLATION_SYSTEM_PROMPT, rawOcrText))
 
     private companion object {
-        const val MODEL = "gemini-2.0-flash"
+        // gemini-2.0-flash는 일부 프로젝트에서 무료 할당량이 0(429)이라 사용 불가.
+        // 2.5-flash-lite는 무료 티어에서 안정적으로 동작(JSON 모드 지원).
+        const val MODEL = "gemini-2.5-flash-lite"
 
         const val VOCAB_SYSTEM_PROMPT = """
 너는 중국어 교재 단어 페이지 OCR 텍스트를 표로 구조화하는 도우미다. 출력은 반드시 유효한 JSON 하나뿐.

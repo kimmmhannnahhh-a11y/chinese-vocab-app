@@ -8,6 +8,7 @@ import com.example.chineselock.core.network.VocabItem
 import com.example.chineselock.core.ocr.OcrTextRecognizer
 import com.google.mlkit.vision.common.InputImage
 import dagger.hilt.android.lifecycle.HiltViewModel
+import retrofit2.HttpException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -56,6 +57,14 @@ class CaptureViewModel @Inject constructor(
                     return@launch
                 }
                 _ui.update { it.copy(phase = Phase.REVIEW, items = extraction.items) }
+            } catch (e: HttpException) {
+                fail(
+                    when (e.code()) {
+                        429 -> "요청이 잠시 몰렸어요(무료 한도). 1~2분 뒤 다시 시도해주세요."
+                        in 500..599 -> "Gemini 서버가 잠시 혼잡해요. 잠시 후 다시 시도해주세요."
+                        else -> "서버 오류(${e.code()}). 잠시 후 다시 시도해주세요."
+                    }
+                )
             } catch (e: Exception) {
                 fail(e.message ?: "처리 중 오류가 발생했어요.")
             }
