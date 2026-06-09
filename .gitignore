@@ -11,3 +11,6 @@ local.properties
 /app/build/
 # Secrets — do NOT commit API keys
 secrets.properties
+
+# build logs
+build_log*.txt
