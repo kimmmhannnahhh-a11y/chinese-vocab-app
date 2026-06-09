@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>틈새 중국어</title>
+<link href="https://cdn.jsdelivr.net/gh/fonts-archive/Cafe24Ssurround/subsets/Cafe24Ssurround-dynamic-subset.css" rel="stylesheet">
+<style>
+  :root{ --bg2:#FFFFFF; --card:#FFFFFF; --ink:#3D3450; --sub:#8E86A0; --muted:#BCB4CE; --faint:#D6CFE4;
+    --line-p:#F1ECF9; --purple:#5B3F8C; --purple-s:#ECE4F7; --peach:#9173C9; --peach-s:#EEE8FA; --blue:#6E4FAE; --blue-s:#ECE4F7; }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body{ margin:0; height:100%; }
+  body{ background:#D9D2EC; color:var(--ink); font-family:'Cafe24 Ssurround','Pretendard','Malgun Gothic',sans-serif; display:flex; align-items:center; justify-content:center; }
+  .han{ font-family:'PingFang SC','Noto Sans SC','Microsoft YaHei',sans-serif; }
+  #app{ width:100%; max-width:430px; height:100%; max-height:920px; background:var(--bg2); display:flex; flex-direction:column; position:relative; overflow:hidden; box-shadow:0 20px 60px -20px rgba(91,63,140,.5); }
+  @media(min-width:460px){ #app{ border-radius:32px; height:880px; } }
+  .appbar{ padding:18px 20px 14px; flex-shrink:0; display:flex; align-items:flex-end; justify-content:space-between; gap:8px; }
+  .appbar .kicker{ font-size:11px; letter-spacing:1px; color:var(--sub); }
+  .appbar h2{ margin:4px 0 0; font-size:23px; color:var(--ink); }
+  .body{ flex:1; overflow-y:auto; padding:6px 15px 18px; } .body::-webkit-scrollbar{ width:0; }
+  .muted{ color:var(--muted); } .sub{ color:var(--sub); } .small{ font-size:11px; }
+  .qrow{ display:flex; align-items:center; gap:11px; background:var(--card); border-radius:16px; padding:14px 15px; border:1px solid var(--line-p); box-shadow:0 8px 18px -14px rgba(91,63,140,.18); cursor:pointer; }
+  .qrow + .qrow{ margin-top:12px; }
+  .chip{ width:34px; height:34px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0; background:var(--peach-s); color:var(--peach); } .chip svg{ width:18px; height:18px; }
+  .qrow .lbl{ font-size:14px; } .qrow .chev{ margin-left:auto; color:var(--faint); }
+  .card{ background:var(--card); border-radius:20px; border:1px solid var(--line-p); box-shadow:0 8px 20px -14px rgba(91,63,140,.20); }
+  .seg{ display:flex; background:#F0E9F7; border-radius:14px; padding:4px; gap:4px; }
+  .seg span{ flex:1; text-align:center; font-size:13px; padding:9px 0; border-radius:11px; color:var(--sub); cursor:pointer; }
+  .seg span.on{ background:#fff; color:var(--purple); box-shadow:0 4px 10px -6px rgba(91,63,140,.4); font-weight:700; }
+  .dropdown{ display:inline-flex; align-items:center; gap:6px; background:#fff; border-radius:11px; padding:8px 11px; font-size:14px; color:var(--ink); border:1px solid #C4C0CE; white-space:nowrap; cursor:pointer; }
+  .dropdown .cv{ color:var(--purple); font-weight:700; } .dropdown svg{ width:14px; height:14px; color:var(--muted); }
+  .vrow{ display:flex; align-items:center; gap:8px; padding:11px 14px; } .vrow + .vrow{ border-top:1px solid var(--line-p); }
+  .vhan{ font-size:18px; white-space:nowrap; flex-shrink:0; min-width:54px; }
+  .vmean{ font-size:14px; font-family:'Malgun Gothic',sans-serif; }
+  .vpin{ color:var(--sub); font-size:12px; margin-top:1px; font-family:'Malgun Gothic',sans-serif; }
+  .mask{ height:15px; border-radius:7px; margin:3px 0; width:72%; cursor:pointer; background:repeating-linear-gradient(90deg,#EFE7F8,#EFE7F8 10px,#F6F0FB 10px,#F6F0FB 20px); color:var(--muted); font-size:10px; line-height:15px; padding-left:8px; }
+  .posbox{ display:inline-flex; align-items:center; justify-content:center; min-width:17px; height:17px; padding:0 3px; border-radius:4px; font-size:10px; background:var(--purple-s); color:var(--purple); margin-right:4px; }
+  .po-n2{ background:#DEE9FB; color:#3667A8; } .po-v2{ background:#FBE2D6; color:#BF5A36; } .po-a2{ background:#FBE0EC; color:#C2457E; }
+  .po-d2{ background:#DCF1EA; color:#2E8B6B; } .po-m2{ background:#ECE4F7; color:#5B3F8C; } .po-p2{ background:#F7EBC9; color:#9A7B1F; }
+  .talkbtn{ width:32px; height:32px; border-radius:50%; border:none; background:var(--purple-s); color:var(--purple); display:flex; align-items:center; justify-content:center; flex-shrink:0; cursor:pointer; } .talkbtn svg{ width:15px; height:15px; }
+  .starbtn{ border:none; background:transparent; color:var(--faint); display:flex; flex-shrink:0; padding:4px; cursor:pointer; } .starbtn.on{ color:#E8B53D; } .starbtn svg{ width:19px; height:19px; }
+  .delbtn{ border:none; background:#FBE0E6; color:#C24062; width:28px; height:28px; border-radius:8px; display:flex; align-items:center; justify-content:center; flex-shrink:0; cursor:pointer; } .delbtn svg{ width:14px; height:14px; }
+  .editbtn{ width:34px; height:34px; border-radius:10px; border:1px solid #C4C0CE; background:#fff; color:var(--purple); display:flex; align-items:center; justify-content:center; flex-shrink:0; cursor:pointer; }
+  .editbtn.on{ background:var(--purple); color:#fff; border-color:var(--purple); } .editbtn svg{ width:16px; height:16px; }
+  .turn{ display:flex; gap:8px; align-items:flex-start; padding:11px 2px; } .turn + .turn{ border-top:1px solid var(--line-p); }
+  .turn .tx{ flex:1; min-width:0; font-family:'Malgun Gothic',sans-serif; } .turn .tx .han{ font-size:15px; line-height:1.5; color:var(--ink); } .turn .tx .pin{ color:var(--sub); font-size:11px; margin-top:2px; }
+  .who{ font-size:11px; font-weight:700; padding:3px 9px; border-radius:8px; align-self:flex-start; flex-shrink:0; }
+  .who.A{ background:var(--purple-s); color:var(--purple); } .who.B{ background:#DCF1EA; color:#2E8B6B; }
+  .langtoggle{ display:flex; background:#F0E9F7; border-radius:9px; padding:3px; gap:2px; font-size:12px; }
+  .langtoggle span{ padding:6px 11px; border-radius:7px; color:var(--sub); cursor:pointer; } .langtoggle span.on{ background:var(--purple); color:#fff; }
+  .playall{ display:inline-flex; align-items:center; gap:5px; background:var(--purple); color:#fff; border:none; border-radius:9px; padding:7px 12px; font-size:12px; cursor:pointer; } .playall svg{ width:12px; height:12px; }
+  .posfilter{ display:flex; flex-wrap:wrap; gap:6px; }
+  .posfilter span{ font-size:12px; padding:7px 12px; border-radius:9px; background:#fff; border:1px solid var(--line-p); color:var(--sub); cursor:pointer; }
+  .posfilter span.on{ background:var(--purple); color:#fff; border-color:var(--purple); }
+  .searchbar{ display:flex; align-items:center; gap:9px; background:#fff; border:1px solid var(--line-p); border-radius:13px; padding:12px 14px; margin-bottom:12px; }
+  .searchbar svg{ width:17px; height:17px; color:var(--muted); flex-shrink:0; }
+  .searchbar input{ border:none; outline:none; font-size:14px; width:100%; font-family:inherit; background:transparent; color:var(--ink); }
+  input.fld,textarea.fld{ width:100%; border:none; border-radius:13px; padding:13px 14px; font-size:14px; box-shadow:inset 0 0 0 1px var(--line-p); font-family:inherit; outline:none; background:#fff; color:var(--ink); }
+  textarea.fld{ min-height:120px; resize:vertical; line-height:1.7; }
+  .btn{ width:100%; justify-content:center; background:var(--purple); color:#fff; border:none; border-radius:13px; padding:14px; font-size:15px; font-family:inherit; cursor:pointer; display:flex; align-items:center; gap:7px; }
+  .btn:disabled{ background:#C9C0DD; } .btn.ghost{ background:#fff; color:var(--purple); border:1.5px solid #C7BEDC; }
+  .addrow{ display:flex; align-items:center; justify-content:center; gap:6px; border:1.5px dashed #C7BEDC; border-radius:12px; padding:12px; color:var(--purple); font-size:14px; margin-top:12px; cursor:pointer; } .addrow svg{ width:15px; height:15px; }
+  .nav{ height:64px; background:#fff; display:flex; flex-shrink:0; box-shadow:0 -6px 18px -12px rgba(91,63,140,.18); }
+  .nav a{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px; font-size:10px; color:var(--faint); cursor:pointer; } .nav a svg{ width:22px; height:22px; } .nav a.on{ color:var(--purple); }
+  .hero{ position:relative; height:150px; border-radius:18px; overflow:hidden; margin-bottom:16px; background:linear-gradient(135deg,#4A3A6E,#2C2048); } .hero .lbl{ position:absolute; left:16px; bottom:14px; color:#fff; }
+  .toast{ position:absolute; left:50%; bottom:80px; transform:translateX(-50%); background:#3D3450; color:#fff; padding:10px 18px; border-radius:99px; font-size:13px; opacity:0; transition:.3s; pointer-events:none; white-space:nowrap; z-index:50; } .toast.show{ opacity:.95; }
+  .ocrbar{ display:flex; gap:8px; margin:12px 0; } .ocrbar .btn{ font-size:13px; padding:12px; }
+  #ocrStatus{ font-size:12px; color:var(--purple); text-align:center; margin-top:8px; display:none; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-speaker" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 9.5h3l4.5-3.5v12L7 14.5H4z"/><path d="M16 9a4 4 0 0 1 0 6" stroke-linecap="round"/><path d="M18.5 6.5a8 8 0 0 1 0 11" stroke-linecap="round"/></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z"/></symbol>
+  <symbol id="i-book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 6.5C10.5 5 8 4.5 4.5 5v13c3.5-.5 6 0 7.5 1.5 1.5-1.5 4-2 7.5-1.5V5C16 4.5 13.5 5 12 6.5z"/><path d="M12 6.5v13"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 5h16v11H9l-4 3.5V16H4z"/></symbol>
+  <symbol id="i-camera" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 8h3l1.5-2h7L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.2"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-3.8-3.8"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path fill="currentColor" d="M7 5.5v13a1 1 0 0 0 1.5.87l11-6.5a1 1 0 0 0 0-1.74l-11-6.5A1 1 0 0 0 7 5.5z"/></symbol>
+  <symbol id="i-chevD" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 10l6 6 6-6"/></symbol>
+  <symbol id="i-chevR" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 17l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></symbol>
+  <symbol id="i-star-fill" viewBox="0 0 24 24"><path fill="currentColor" d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 17l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L18.5 9.5l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14M9.5 7V5h5v2M6.5 7l1 12h9l1-12"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></symbol>
+</svg>
+<div id="app">
+  <div id="screen" style="display:flex;flex-direction:column;flex:1;overflow:hidden"></div>
+  <nav class="nav" id="nav"></nav>
+  <div class="toast" id="toast"></div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script>
+const svg = id => '<svg viewBox="0 0 24 24"><use href="#'+id+'"/></svg>';
+const $ = s => document.querySelector(s);
+const POSMAP = {'명사':'n2','동사':'v2','형용사':'a2','부사':'d2','양사':'m2','대명사':'p2'};
+const SEED = { units:{ "3-1":[
+  {hanzi:"圆珠笔",pinyin:"yuánzhūbǐ",pos:["명사"],meaning:"볼펜",fav:true},
+  {hanzi:"啤酒",pinyin:"píjiǔ",pos:["명사"],meaning:"맥주",fav:false},
+  {hanzi:"瓶",pinyin:"píng",pos:["양사","명사"],meaning:"병",fav:true},
+  {hanzi:"一共",pinyin:"yígòng",pos:["부사"],meaning:"모두",fav:false},
+  {hanzi:"名字",pinyin:"míngzi",pos:["명사"],meaning:"이름",fav:false},
+  {hanzi:"旅行",pinyin:"lǚxíng",pos:["명사"],meaning:"여행",fav:false},
+  {hanzi:"羊肉串",pinyin:"yángròuchuàn",pos:["명사"],meaning:"양꼬치",fav:true},
+  {hanzi:"老板",pinyin:"lǎobǎn",pos:["명사"],meaning:"사장님",fav:false},
+  {hanzi:"下次",pinyin:"xiàcì",pos:[],meaning:"다음에",fav:false},
+  {hanzi:"当然可以",pinyin:"dāngrán kěyǐ",pos:[],meaning:"물론이죠",fav:false} ]},
+  convos:{ "3-1":{ sub:"① 왜 중국어를 배우러 왔나요? · 01-02", items:[
+  {sp:"A",cn:"你好！你叫什么名字？",pin:"Nǐ hǎo! Nǐ jiào shénme míngzi?",ko:"안녕! 너 이름이 뭐야?"},
+  {sp:"B",cn:"我叫李钟文。",pin:"Wǒ jiào Lǐ Zhōngwén.",ko:"내 이름은 이종원이야."},
+  {sp:"A",cn:"你好，李钟文！我猜你一定是韩国人。",pin:"Nǐ hǎo, Lǐ Zhōngwén! Wǒ cāi nǐ yídìng shì Hánguó rén.",ko:"안녕 이종원! 너 분명 한국 사람이지."},
+  {sp:"B",cn:"你呢？",pin:"Nǐ ne?",ko:"너는?"},
+  {sp:"A",cn:"我叫飞龙，法国人，是大学生。",pin:"Wǒ jiào Fēilóng, Fǎguó rén, shì dàxuéshēng.",ko:"난 페이롱, 프랑스 사람이고 대학생이야."},
+  {sp:"B",cn:"你为什么来学汉语？",pin:"Nǐ wèishénme lái xué Hànyǔ?",ko:"너는 왜 중국어를 배우러 왔어?"} ]} } };
+let S = load();
+function load(){ try{ const r=localStorage.getItem('cva_state'); if(r) return JSON.parse(r); }catch(e){} return JSON.parse(JSON.stringify(SEED)); }
+function save(){ localStorage.setItem('cva_state', JSON.stringify(S)); }
+function unitKeys(){ return Object.keys(S.units); }
+function allWords(){ return unitKeys().flatMap(k=>S.units[k].map(w=>Object.assign({},w,{unit:k}))); }
+function speak(text){ if(!('speechSynthesis' in window)){ toast('이 브라우저는 발음 미지원'); return; }
+  speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(text); u.lang='zh-CN'; u.rate=0.9;
+  const v=speechSynthesis.getVoices().find(v=>v.lang&&v.lang.toLowerCase().startsWith('zh')); if(v)u.voice=v; speechSynthesis.speak(u); }
+function speakSeq(list){ if(!('speechSynthesis' in window))return; speechSynthesis.cancel();
+  list.forEach(t=>{ const u=new SpeechSynthesisUtterance(t); u.lang='zh-CN'; u.rate=0.9;
+  const v=speechSynthesis.getVoices().find(v=>v.lang&&v.lang.toLowerCase().startsWith('zh')); if(v)u.voice=v; speechSynthesis.speak(u); }); }
+function toast(m){ const t=$('#toast'); t.textContent=m; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),1800); }
+let state={ tab:'home', unit:'3-1', segVocab:'all', revealed:{}, editVocab:false, posFilter:'전체', search:'', lang:'cn' };
+function go(tab){ state.tab=tab; state.revealed={}; render(); }
+const NAV=[['home','홈','i-home'],['vocab','단어장','i-book'],['convo','회화','i-chat'],['fav','즐겨찾기','i-star']];
+function renderNav(){ $('#nav').innerHTML=NAV.map(a=>'<a class="'+(state.tab===a[0]?'on':'')+'" onclick="go(\''+a[0]+'\')">'+svg(a[2])+a[1]+'</a>').join(''); }
+function posBoxes(pos){ return (pos||[]).map(p=>'<span class="posbox po-'+(POSMAP[p]||'m2')+'">'+p[0]+'</span>').join(''); }
+function screenHome(){ const words=allWords(); const w=words.length?words[(new Date().getDate())%words.length]:null;
+  return '<div class="appbar"><h2>오늘의 학습</h2></div><div class="body">'+
+    (w?'<div class="hero"><div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(20,10,40,.15),rgba(25,12,55,.5))"></div><div class="lbl"><div style="font-size:11px;letter-spacing:1.5px;opacity:.85">오늘의 단어</div><div class="han" style="font-size:32px;font-weight:600;margin:4px 0 2px">'+w.hanzi+'</div><div style="font-size:13px;opacity:.92">'+w.pinyin+' · '+w.meaning+'</div></div><button class="talkbtn" style="position:absolute;right:14px;bottom:14px;background:rgba(255,255,255,.25);color:#fff" onclick="speak(\''+w.hanzi+'\')">'+svg('i-speaker')+'</button></div>':'')+
+    '<div class="qrow" onclick="go(\'add\')"><span class="chip">'+svg('i-camera')+'</span><span class="lbl">단어 추가 (사진/직접입력)</span><span class="chev">'+svg('i-chevR')+'</span></div>'+
+    '<div class="qrow" onclick="go(\'search\')"><span class="chip" style="background:var(--blue-s);color:var(--blue)">'+svg('i-search')+'</span><span class="lbl">단어찾기 · 품사별</span><span class="chev">'+svg('i-chevR')+'</span></div>'+
+    '<div style="text-align:center;color:var(--muted);font-size:11px;margin-top:24px">등록된 단어 '+words.length+'개 · 이 브라우저에 저장돼요</div></div>'; }
+function vocabRow(w,i,unit){ const rid=unit+'_'+i; const open=state.segVocab==='all'||state.revealed[rid];
+  const talk='<button class="talkbtn" onclick="event.stopPropagation();speak(\''+w.hanzi+'\')">'+svg('i-speaker')+'</button>';
+  const star='<button class="starbtn '+(w.fav?'on':'')+'" onclick="event.stopPropagation();toggleFav(\''+unit+'\','+i+')">'+svg(w.fav?'i-star-fill':'i-star')+'</button>';
+  if(state.editVocab) return '<div class="vrow"><span class="han vhan">'+w.hanzi+'</span><div style="flex:1"><div>'+posBoxes(w.pos)+'<span class="vmean">'+w.meaning+'</span></div><div class="vpin">'+w.pinyin+'</div></div><button class="delbtn" onclick="delWord(\''+unit+'\','+i+')">'+svg('i-trash')+'</button></div>';
+  let left,mid;
+  if(state.segVocab==='meaning'){ left=open?'<span class="han vhan">'+w.hanzi+'</span>':'<span class="vhan"></span>';
+    mid='<div>'+posBoxes(w.pos)+'<span class="vmean">'+w.meaning+'</span></div>'+(open?'<div class="vpin">'+w.pinyin+'</div>':'<div class="mask" onclick="reveal(\''+rid+'\')">탭하면 한자·병음</div>'); }
+  else if(state.segVocab==='hanzi'){ left='<span class="han vhan">'+w.hanzi+'</span>';
+    mid=open?'<div>'+posBoxes(w.pos)+'<span class="vmean">'+w.meaning+'</span></div><div class="vpin">'+w.pinyin+'</div>':'<div class="mask" onclick="reveal(\''+rid+'\')">탭하면 뜻·병음</div>'; }
+  else { left='<span class="han vhan">'+w.hanzi+'</span>'; mid='<div>'+posBoxes(w.pos)+'<span class="vmean">'+w.meaning+'</span></div><div class="vpin">'+w.pinyin+'</div>'; }
+  return '<div class="vrow">'+left+'<div style="flex:1;min-width:0">'+mid+'</div>'+talk+star+'</div>'; }
+function screenVocab(){ const u=state.unit in S.units?state.unit:unitKeys()[0]; state.unit=u;
+  const list=(S.units[u]||[]).map((w,i)=>vocabRow(w,i,u)).join('')||'<div class="sub small" style="text-align:center;padding:20px">단어가 없어요</div>';
+  const segs=[['all','전체'],['hanzi','한자만'],['meaning','뜻만']];
+  return '<div class="appbar"><h2 style="white-space:nowrap">단어장</h2><div style="display:flex;align-items:center;gap:8px"><div class="dropdown" onclick="pickUnit(false)"><span class="cv">'+u+'</span>'+svg('i-chevD')+'</div><button class="editbtn '+(state.editVocab?'on':'')+'" onclick="state.editVocab=!state.editVocab;render()">'+svg('i-edit')+'</button></div></div><div class="body">'+
+    (state.editVocab?'':'<div class="seg">'+segs.map(s=>'<span class="'+(state.segVocab===s[0]?'on':'')+'" onclick="state.segVocab=\''+s[0]+'\';state.revealed={};render()">'+s[1]+'</span>').join('')+'</div>')+
+    '<div class="card" style="padding:2px;margin-top:14px">'+list+'</div>'+
+    (state.editVocab?'<div class="addrow" onclick="go(\'add\')">'+svg('i-plus')+' 단어 추가</div>':'<div class="sub small" style="text-align:center;margin-top:12px">'+(state.segVocab==='all'?'🔊 발음 듣기 · ★ 즐겨찾기':'가린 칸을 탭하면 공개돼요')+'</div>')+'</div>'; }
+function screenConvo(){ const u=state.unit in S.convos?state.unit:Object.keys(S.convos)[0]; const c=S.convos[u];
+  if(!c) return '<div class="appbar"><h2>회화 배우기</h2></div><div class="body"><div class="sub small" style="text-align:center;padding:30px">이 단원엔 회화가 없어요</div></div>';
+  const rows=c.items.map(it=>{ const txt=state.lang==='cn'?'<div class="han">'+it.cn+'</div><div class="pin">'+(it.pin||'')+'</div>':'<div class="han">'+(it.ko||'(번역 없음)')+'</div>';
+    const who=it.sp?'<span class="who '+it.sp+'">'+it.sp+'</span>':''; return '<div class="turn">'+who+'<div class="tx">'+txt+'</div><button class="talkbtn" onclick="speak(\''+it.cn+'\')">'+svg('i-speaker')+'</button></div>'; }).join('');
+  const seq=c.items.map(i=>i.cn).join('|||');
+  return '<div class="appbar"><h2 style="white-space:nowrap">회화 배우기</h2><div class="dropdown" onclick="pickUnit(true)"><span class="cv">'+u+'</span>'+svg('i-chevD')+'</div></div><div class="body"><div class="sub" style="font-size:12px;margin-bottom:8px">'+(c.sub||'')+'</div><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"><div class="langtoggle"><span class="'+(state.lang==='cn'?'on':'')+'" onclick="state.lang=\'cn\';render()">중국어</span><span class="'+(state.lang==='ko'?'on':'')+'" onclick="state.lang=\'ko\';render()">번역</span></div><button class="playall" onclick="speakSeq(\''+seq+'\'.split(\'|||\'))">'+svg('i-play')+' 전체 듣기</button></div><div>'+rows+'</div></div>'; }
+function screenFav(){ const favs=allWords().filter(w=>w.fav); const segs=[['all','전체'],['hanzi','한자만'],['meaning','뜻만']];
+  const list=favs.length?favs.map(w=>{ const rid='f_'+w.unit+w.hanzi; const open=state.segVocab==='all'||state.revealed[rid]; let body;
+    if(state.segVocab==='hanzi') body='<span class="han vhan">'+w.hanzi+'</span><div style="flex:1">'+(open?'<div>'+posBoxes(w.pos)+'<span class="vmean">'+w.meaning+'</span></div><div class="vpin">'+w.pinyin+'</div>':'<div class="mask" onclick="reveal(\''+rid+'\')">탭하면 뜻·병음</div>')+'</div>';
+    else if(state.segVocab==='meaning') body=(open?'<span class="han vhan">'+w.hanzi+'</span>':'<span class="vhan"></span>')+'<div style="flex:1"><div>'+posBoxes(w.pos)+'<span class="vmean">'+w.meaning+'</span></div>'+(open?'<div class="vpin">'+w.pinyin+'</div>':'<div class="mask" onclick="reveal(\''+rid+'\')">탭하면 한자</div>')+'</div>';
+    else body='<span class="han vhan">'+w.hanzi+'</span><div style="flex:1"><div>'+posBoxes(w.pos)+'<span class="vmean">'+w.meaning+'</span></div><div class="vpin">'+w.pinyin+'</div></div>';
+    return '<div class="vrow">'+body+'<button class="talkbtn" onclick="speak(\''+w.hanzi+'\')">'+svg('i-speaker')+'</button><button class="starbtn on" onclick="unfav(\''+w.unit+'\',\''+w.hanzi+'\')">'+svg('i-star-fill')+'</button></div>'; }).join(''):'<div class="sub small" style="text-align:center;padding:30px">★ 표시한 단어가 없어요.<br>단어장에서 별을 눌러보세요.</div>';
+  return '<div class="appbar"><div><div class="kicker">★ 표시한 단어만</div><h2>즐겨찾기</h2></div></div><div class="body"><div class="seg">'+segs.map(s=>'<span class="'+(state.segVocab===s[0]?'on':'')+'" onclick="state.segVocab=\''+s[0]+'\';state.revealed={};render()">'+s[1]+'</span>').join('')+'</div><div class="card" style="padding:2px;margin-top:14px">'+list+'</div></div>'; }
+function screenSearch(){ const POS=['전체','명사','형용사','부사','양사','동사','대명사']; let res=allWords();
+  if(state.posFilter!=='전체') res=res.filter(w=>(w.pos||[]).includes(state.posFilter));
+  if(state.search){ const q=state.search.toLowerCase(); res=res.filter(w=>w.hanzi.includes(state.search)||w.pinyin.toLowerCase().includes(q)||w.meaning.includes(state.search)); }
+  const list=res.length?res.map(w=>'<div class="vrow"><span class="han vhan">'+w.hanzi+'</span><div style="flex:1"><div>'+posBoxes(w.pos)+'<span class="vmean">'+w.meaning+'</span></div><div class="vpin">'+w.pinyin+'</div></div><button class="talkbtn" onclick="speak(\''+w.hanzi+'\')">'+svg('i-speaker')+'</button></div>').join(''):'<div class="sub small" style="text-align:center;padding:24px">결과가 없어요</div>';
+  return '<div class="appbar"><button class="editbtn" onclick="go(\'home\')">'+svg('i-back')+'</button><div style="flex:1"><div class="kicker">등록한 모든 단어에서</div><h2>단어찾기</h2></div></div><div class="body"><div class="searchbar">'+svg('i-search')+'<input id="schIn" placeholder="중국어·병음·한글로 검색" value="'+state.search+'" oninput="state.search=this.value;rerenderKeep(\'schIn\')"></div><div class="posfilter">'+POS.map(p=>'<span class="'+(state.posFilter===p?'on':'')+'" onclick="state.posFilter=\''+p+'\';render()">'+p+'</span>').join('')+'</div><div class="card" style="padding:2px;margin-top:14px">'+list+'</div><div class="sub small" style="text-align:center;margin-top:12px">'+res.length+'개 · 단원 상관없이 모아보기</div></div>'; }
+let addBuf={ title:'3-1', paste:'' };
+function screenAdd(){ const items=parseVocab(addBuf.paste);
+  const prev=items.length?'<div class="card" style="padding:2px;margin-top:12px">'+items.map(w=>'<div class="vrow"><span class="han vhan">'+w.hanzi+'</span><div style="flex:1"><span class="vmean">'+w.meaning+'</span><div class="vpin">'+w.pinyin+'</div></div></div>').join('')+'</div>':'';
+  return '<div class="appbar"><button class="editbtn" onclick="go(\'vocab\')">'+svg('i-back')+'</button><div><div class="kicker">새 단어 등록</div><h2>추가하기</h2></div></div><div class="body"><div class="sub small" style="margin-bottom:6px">제목 (단원)</div><input class="fld" id="titleIn" value="'+addBuf.title+'" oninput="addBuf.title=this.value" placeholder="예: 3-1"><div class="ocrbar"><button class="btn" onclick="$(\'#ocrCam\').click()" style="flex:1">'+svg('i-camera')+' 사진 찍기</button><button class="btn ghost" onclick="$(\'#ocrGal\').click()" style="flex:1">사진 선택</button></div><input id="ocrCam" type="file" accept="image/*" capture="environment" style="display:none" onchange="runOCR(this)"><input id="ocrGal" type="file" accept="image/*" style="display:none" onchange="runOCR(this)"><div id="ocrStatus"></div><div class="sub small" style="margin:14px 0 6px">직접 입력 — 뜻 / 병음 / 한자 (한 줄에 하나, 탭·쉼표·띄어쓰기 구분)</div><textarea class="fld" id="pasteIn" placeholder="다음에  xiàcì  下次" oninput="addBuf.paste=this.value;rerenderKeep(\'pasteIn\')">'+addBuf.paste+'</textarea>'+(items.length?'<div class="sub small" style="margin-top:12px">미리보기 '+items.length+'개</div>':'')+prev+'<div style="height:14px"></div><button class="btn" '+(items.length?'':'disabled')+' onclick="registerVocab()">'+svg('i-plus')+' '+items.length+'개 단어 등록</button><div class="sub small muted" style="text-align:center;margin:10px 0 20px">사진은 글자만 인식해요(무료). 줄맞춤은 살짝 다듬어주세요.</div></div>'; }
+const HAN=/[一-鿿]/, HANG=/[가-힣]/;
+function classify(t){ if(HAN.test(t))return'han'; if(HANG.test(t))return'ko'; if(/[a-zA-Zà-ǿ]/.test(t))return'pin'; return'x'; }
+function parseVocab(raw){ if(!raw)return[];
+  return raw.split('\n').map(l=>l.trim()).filter(Boolean).map(line=>{
+    let cols=line.split('\t').map(s=>s.trim()).filter(Boolean);
+    if(cols.length<2) cols=line.split(',').map(s=>s.trim()).filter(Boolean);
+    if(cols.length>=3 && HAN.test(cols[2])) return mk(cols[2],cols[1],cols[0]);
+    const toks=line.split(/\s+/); let han='',pin='',ko='';
+    toks.forEach(t=>{ const c=classify(t); if(c==='han')han+=t; else if(c==='ko')ko+=(ko?' ':'')+t; else if(c==='pin')pin+=(pin?' ':'')+t; });
+    if(han) return mk(han,pin,ko||pin); return null; }).filter(Boolean); }
+function mk(h,p,m){ return {hanzi:h,pinyin:p||'',pos:[],meaning:m||'',fav:false}; }
+function reveal(id){ state.revealed[id]=true; render(); }
+function toggleFav(u,i){ S.units[u][i].fav=!S.units[u][i].fav; save(); render(); }
+function unfav(u,h){ const w=(S.units[u]||[]).find(x=>x.hanzi===h); if(w){w.fav=false;save();render();} }
+function delWord(u,i){ S.units[u].splice(i,1); save(); render(); }
+function registerVocab(){ const items=parseVocab(addBuf.paste); if(!items.length)return; const u=(addBuf.title||'').trim()||'기타';
+  if(!S.units[u]) S.units[u]=[]; S.units[u].push.apply(S.units[u],items); save(); toast(items.length+'개 단어를 등록했어요'); addBuf.paste=''; state.unit=u; go('vocab'); }
+function pickUnit(convo){ const keys=convo?Object.keys(S.convos):unitKeys(); if(keys.length<2){ toast('단원이 하나뿐이에요'); return; }
+  const cur=keys.indexOf(state.unit); state.unit=keys[(cur+1)%keys.length]; state.revealed={}; render(); }
+async function runOCR(input){ const file=input.files[0]; if(!file)return; const st=$('#ocrStatus'); st.style.display='block'; st.textContent='글자 인식 준비 중… (처음엔 시간이 좀 걸려요)';
+  try{ if(typeof Tesseract==='undefined'){ st.textContent='OCR 모듈 로딩 실패(인터넷 확인)'; return; }
+    const r=await Tesseract.recognize(file,'chi_sim',{logger:m=>{ if(m.status==='recognizing text') st.textContent='글자 인식 중… '+Math.round(m.progress*100)+'%'; }});
+    const text=(r.data.text||'').replace(/[ ]{2,}/g,' ').replace(/\n{2,}/g,'\n').trim();
+    addBuf.paste=addBuf.paste?addBuf.paste.trim()+'\n'+text:text; st.textContent='인식 완료! 아래에서 다듬어주세요.'; setTimeout(()=>{st.style.display='none';},2500); render();
+  }catch(e){ st.textContent='인식 실패: '+e.message; } input.value=''; }
+const SCREENS={ home:screenHome, vocab:screenVocab, convo:screenConvo, fav:screenFav, search:screenSearch, add:screenAdd };
+function render(){ $('#screen').innerHTML=(SCREENS[state.tab]||screenHome)(); renderNav(); }
+function rerenderKeep(id){ const el=$('#'+id); const pos=el?el.selectionStart:null; render(); const n=$('#'+id); if(n){ n.focus(); if(pos!=null){ try{n.setSelectionRange(pos,pos);}catch(e){} } } }
+render();
+</script>
+</body>
+</html>
