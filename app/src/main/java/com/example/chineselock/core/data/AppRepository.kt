@@ -37,11 +37,33 @@ class AppRepository @Inject constructor(
     /** 단원 통째로 삭제(단어·품사·회화 CASCADE). */
     suspend fun deleteUnit(unitId: Long) = withContext(Dispatchers.IO) { unitDao.deleteById(unitId) }
 
-    /** 단원의 '단어만' 전체 삭제(회화는 보존). */
-    suspend fun deleteVocabForUnit(unitId: Long) = withContext(Dispatchers.IO) { vocabDao.deleteByUnit(unitId) }
+    /** 단원의 '단어만' 전체 삭제(회화는 보존). 단어·회화 모두 비면 단원도 삭제. */
+    suspend fun deleteVocabForUnit(unitId: Long) = withContext(Dispatchers.IO) {
+        vocabDao.deleteByUnit(unitId)
+        removeUnitIfEmpty(unitId)
+    }
 
-    /** 단원의 '회화만' 전체 삭제(단어는 보존). */
-    suspend fun deleteDialoguesForUnit(unitId: Long) = withContext(Dispatchers.IO) { dialogueDao.deleteByUnit(unitId) }
+    /** 단원의 '회화만' 전체 삭제(단어는 보존). 단어·회화 모두 비면 단원도 삭제. */
+    suspend fun deleteDialoguesForUnit(unitId: Long) = withContext(Dispatchers.IO) {
+        dialogueDao.deleteByUnit(unitId)
+        removeUnitIfEmpty(unitId)
+    }
+
+    /** 단어·회화가 모두 없으면 빈 단원(제목)을 삭제. */
+    private fun removeUnitIfEmpty(unitId: Long) {
+        if (vocabDao.countByUnit(unitId) == 0 && dialogueDao.countByUnit(unitId) == 0) {
+            unitDao.deleteById(unitId)
+        }
+    }
+
+    /** 단원 제목(권/과) 수정. "3-1" 같은 입력을 권/과로 파싱해 갱신. */
+    suspend fun renameUnit(unitId: Long, newTitle: String) = withContext(Dispatchers.IO) {
+        val parts = newTitle.split("-", " ", ".").mapNotNull { it.trim().toIntOrNull() }
+        val book = parts.getOrElse(0) { 0 }
+        val lesson = parts.getOrElse(1) { 0 }
+        val title = if (parts.isNotEmpty()) "$book-$lesson" else newTitle.trim()
+        unitDao.rename(unitId, book, lesson, title)
+    }
 
     // --- 단어 ---
     fun observeVocab(unitId: Long): Flow<List<Vocab>> = vocabDao.observeByUnit(unitId)

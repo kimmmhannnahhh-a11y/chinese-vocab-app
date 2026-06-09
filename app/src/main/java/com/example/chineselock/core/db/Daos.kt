@@ -27,6 +27,10 @@ interface StudyUnitDao {
     /** 단원 통째로 삭제. FK CASCADE로 소속 단어·품사·회화도 함께 삭제됨. */
     @Query("DELETE FROM study_unit WHERE id = :id")
     fun deleteById(id: Long)
+
+    /** 단원 제목(권/과) 수정. */
+    @Query("UPDATE study_unit SET book = :book, lesson = :lesson, title = :title WHERE id = :id")
+    fun rename(id: Long, book: Int, lesson: Int, title: String)
 }
 
 @Dao
@@ -40,6 +44,8 @@ interface VocabDao {
 
     /** 단원의 단어만 전체 삭제(회화는 보존). vocab_pos는 CASCADE로 함께 삭제. */
     @Query("DELETE FROM vocab WHERE unitId = :unitId") fun deleteByUnit(unitId: Long)
+
+    @Query("SELECT COUNT(*) FROM vocab WHERE unitId = :unitId") fun countByUnit(unitId: Long): Int
 
     @Query("SELECT * FROM vocab WHERE unitId = :unitId ORDER BY orderInUnit")
     fun observeByUnit(unitId: Long): Flow<List<Vocab>>
@@ -119,6 +125,8 @@ interface DialogueDao {
 
     /** 단원의 회화만 전체 삭제(단어는 보존). */
     @Query("DELETE FROM dialogue WHERE unitId = :unitId") fun deleteByUnit(unitId: Long)
+
+    @Query("SELECT COUNT(*) FROM dialogue WHERE unitId = :unitId") fun countByUnit(unitId: Long): Int
 }
 
 @Dao

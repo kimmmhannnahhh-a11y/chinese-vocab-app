@@ -63,6 +63,13 @@ class ConversationViewModel @Inject constructor(
         }
     }
 
+    /** 현재 단원 제목(권-과) 수정. */
+    fun renameCurrentUnit(newTitle: String) {
+        val id = _selectedUnitId.value ?: return
+        if (newTitle.isBlank()) return
+        viewModelScope.launch { repo.renameUnit(id, newTitle) }
+    }
+
     fun speak(text: String) = tts.speak(text)
     fun playAll() = tts.speakSequence(turns.value.map { it.chinese })
 

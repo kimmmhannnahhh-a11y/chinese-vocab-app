@@ -64,13 +64,20 @@ class VocabViewModel @Inject constructor(
     fun toggleFavorite(v: Vocab) = viewModelScope.launch { repo.setFavorite(v.id, !v.isFavorite) }
     fun delete(v: Vocab) = viewModelScope.launch { repo.deleteVocab(v.id) }
 
-    /** 현재 단원의 '단어만' 전체 삭제(회화는 보존). 단원·선택은 유지. */
+    /** 현재 단원의 '단어만' 전체 삭제(회화는 보존). 단어·회화 모두 비면 단원도 삭제됨. */
     fun deleteCurrentUnitVocab() {
         val id = _selectedUnitId.value ?: return
         viewModelScope.launch {
             repo.deleteVocabForUnit(id)
             editMode.value = false
         }
+    }
+
+    /** 현재 단원 제목(권-과) 수정. */
+    fun renameCurrentUnit(newTitle: String) {
+        val id = _selectedUnitId.value ?: return
+        if (newTitle.isBlank()) return
+        viewModelScope.launch { repo.renameUnit(id, newTitle) }
     }
 
     fun addVocab(hanzi: String, pinyin: String, pos: List<String>, meaning: String) {

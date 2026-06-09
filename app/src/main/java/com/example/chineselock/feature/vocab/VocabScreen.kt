@@ -65,6 +65,7 @@ fun VocabScreen(vm: VocabViewModel = hiltViewModel()) {
 
     var showAdd by remember { mutableStateOf(false) }
     var showDeleteUnit by remember { mutableStateOf(false) }
+    var showRename by remember { mutableStateOf(false) }
     val title = units.firstOrNull { it.id == selectedId }?.title ?: "—"
 
     Surface(Modifier.fillMaxSize()) {
@@ -120,6 +121,20 @@ fun VocabScreen(vm: VocabViewModel = hiltViewModel()) {
                     if (selectedId != null) {
                         item {
                             Row(
+                                Modifier.fillMaxWidth().padding(top = 10.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .border(1.dp, AppColors.Faint, RoundedCornerShape(12.dp))
+                                    .clickable { showRename = true }.padding(11.dp),
+                                horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Icon(Icons.Filled.Edit, null, tint = AppColors.Purple, modifier = Modifier.size(15.dp))
+                                Text("  제목(단원) 수정", color = AppColors.Purple, fontSize = 13.sp)
+                            }
+                        }
+                    }
+                    if (selectedId != null) {
+                        item {
+                            Row(
                                 Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 20.dp)
                                     .clip(RoundedCornerShape(12.dp))
                                     .border(1.dp, DangerRed.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
@@ -158,6 +173,33 @@ fun VocabScreen(vm: VocabViewModel = hiltViewModel()) {
             onAdd = { h, p, pos, m -> vm.addVocab(h, p, pos, m); showAdd = false },
         )
     }
+
+    if (showRename) {
+        RenameUnitDialog(
+            current = title,
+            onDismiss = { showRename = false },
+            onConfirm = { vm.renameCurrentUnit(it); showRename = false },
+        )
+    }
+}
+
+@Composable
+private fun RenameUnitDialog(current: String, onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
+    var text by remember { mutableStateOf(current) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("제목(단원) 수정") },
+        text = {
+            OutlinedTextField(
+                value = text, onValueChange = { text = it }, singleLine = true,
+                placeholder = { Text("예: 3-1", color = AppColors.Muted) },
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(text.trim()) }, enabled = text.isNotBlank()) { Text("저장") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("취소") } },
+    )
 }
 
 @Composable

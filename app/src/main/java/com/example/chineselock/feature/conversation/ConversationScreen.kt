@@ -65,15 +65,15 @@ fun ConversationScreen(
     val editMode by vm.editMode.collectAsStateWithLifecycle()
     var showAdd by remember { mutableStateOf(false) }
     var showDeleteAll by remember { mutableStateOf(false) }
+    var showRename by remember { mutableStateOf(false) }
 
     val title = units.firstOrNull { it.id == selectedId }?.title ?: "—"
-    val section = turns.firstOrNull()
-    val header = listOfNotNull(section?.sectionTitle, section?.audioTrack).joinToString(" · ")
+    val sectionTitle = turns.firstOrNull()?.sectionTitle
 
     Surface(Modifier.fillMaxSize()) {
         Column(Modifier.padding(horizontal = 16.dp)) {
             Row(
-                Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 8.dp),
+                Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text("회화 배우기", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
@@ -84,8 +84,12 @@ fun ConversationScreen(
                     Icon(Icons.Filled.Edit, "수정", tint = if (editMode) AppColors.Purple else AppColors.Sub)
                 }
             }
-            if (header.isNotBlank()) {
-                Text(header, color = AppColors.Sub, fontSize = 12.sp, modifier = Modifier.padding(bottom = 8.dp))
+            if (!sectionTitle.isNullOrBlank()) {
+                Text(
+                    sectionTitle,
+                    color = AppColors.Ink, fontSize = 17.sp, fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(bottom = 10.dp),
+                )
             }
             if (!editMode) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -131,6 +135,20 @@ fun ConversationScreen(
                             Text("  문장 추가", color = AppColors.Purple, fontSize = 13.sp)
                         }
                     }
+                    if (selectedId != null) {
+                        item {
+                            Row(
+                                Modifier.fillMaxWidth().padding(top = 10.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .border(1.dp, AppColors.Faint, RoundedCornerShape(12.dp))
+                                    .clickable { showRename = true }.padding(11.dp),
+                                horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Icon(Icons.Filled.Edit, null, tint = AppColors.Purple, modifier = Modifier.size(15.dp))
+                                Text("  제목(단원) 수정", color = AppColors.Purple, fontSize = 13.sp)
+                            }
+                        }
+                    }
                     if (selectedId != null && turns.isNotEmpty()) {
                         item {
                             Row(
@@ -167,6 +185,27 @@ fun ConversationScreen(
                 }
             },
             dismissButton = { TextButton(onClick = { showDeleteAll = false }) { Text("취소") } },
+        )
+    }
+
+    if (showRename) {
+        var text by remember { mutableStateOf(title) }
+        AlertDialog(
+            onDismissRequest = { showRename = false },
+            title = { Text("제목(단원) 수정") },
+            text = {
+                OutlinedTextField(
+                    value = text, onValueChange = { text = it }, singleLine = true,
+                    placeholder = { Text("예: 3-1", color = AppColors.Muted) },
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = { vm.renameCurrentUnit(text.trim()); showRename = false },
+                    enabled = text.isNotBlank(),
+                ) { Text("저장") }
+            },
+            dismissButton = { TextButton(onClick = { showRename = false }) { Text("취소") } },
         )
     }
 }

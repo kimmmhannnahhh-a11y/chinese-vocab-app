@@ -15,8 +15,9 @@ import kotlin.coroutines.resumeWithException
  * 온디바이스 중국어 OCR(ML Kit). 무료·오프라인.
  * 사진(InputImage) → 인식된 원문 텍스트. Gemini 구조화 전 단계.
  *
- * 교재가 2단(좌/우) 구성이면 ML Kit 기본 읽기 순서가 좌우를 섞어버린다.
- * 줄의 좌표(boundingBox)로 단을 나눠 '왼쪽 세로 전체 → 오른쪽 세로 전체' 순서로 재정렬한다.
+ * 교재가 2단(좌/우) 구성이면 ML Kit 기본 읽기 순서가 좌우를 한 줄로 섞어버린다.
+ * 그래서 '글자(element) 단위 좌표'로 좌/우 단을 가른 뒤,
+ * 왼쪽 단을 위→아래로 전부 재조립하고 그다음 오른쪽 단을 위→아래로 재조립한다.
  */
 @Singleton
 class OcrTextRecognizer @Inject constructor() {
@@ -31,50 +32,57 @@ class OcrTextRecognizer @Inject constructor() {
             .addOnFailureListener { e -> cont.resumeWithException(e) }
     }
 
-    private data class OcrLine(val box: Rect, val text: String)
+    private data class El(val box: Rect, val text: String)
 
-    /**
-     * 줄 좌표로 단(컬럼)을 감지해 좌→우, 각 단은 위→아래 순서로 텍스트를 재구성.
-     * 줄의 '시작 x(left)'로 단을 가른다(긴 줄이 가운데를 넘어가도 안정적). 손글씨 메모로
-     * 간격 감지가 실패하면 페이지 중앙으로 양분하되, 한쪽이 너무 적으면 단일 단으로 본다.
-     */
     private fun orderByColumns(text: Text): String {
-        val lines = ArrayList<OcrLine>()
+        val els = ArrayList<El>()
         for (block in text.textBlocks) {
             for (line in block.lines) {
-                val box = line.boundingBox ?: continue
-                if (line.text.isNotBlank()) lines.add(OcrLine(box, line.text))
+                for (e in line.elements) {
+                    val b = e.boundingBox ?: continue
+                    if (e.text.isNotBlank()) els.add(El(b, e.text))
+                }
             }
         }
-        if (lines.size < 4) return lines.sortedBy { it.box.top }.joinToString("\n") { it.text }
+        if (els.size < 6) return text.text
 
-        val pageLeft = lines.minOf { it.box.left }
-        val pageRight = lines.maxOf { it.box.right }
-        val pageWidth = (pageRight - pageLeft).coerceAtLeast(1)
+        val pageLeft = els.minOf { it.box.left }
+        val pageRight = els.maxOf { it.box.right }
+        val width = (pageRight - pageLeft).coerceAtLeast(1)
+        val splitX = pageLeft + width * 0.5f
 
-        // 1) 줄 시작 x들 중 중앙(25~75%)에서 가장 큰 빈 간격을 단 경계 후보로.
-        val lefts = lines.map { it.box.left.toFloat() }.sorted()
-        var splitX = pageLeft + pageWidth * 0.5f   // 기본: 페이지 중앙
-        var bestGap = 0f
-        for (i in 0 until lefts.size - 1) {
-            val gap = lefts[i + 1] - lefts[i]
-            val mid = (lefts[i] + lefts[i + 1]) / 2f
-            val rel = (mid - pageLeft) / pageWidth
-            if (rel in 0.25f..0.75f && gap > bestGap) {
-                bestGap = gap
-                splitX = mid
-            }
-        }
-        // 뚜렷한 간격이 없으면(손글씨로 메워짐) 중앙 양분 사용 — splitX는 이미 중앙.
+        val left = els.filter { it.box.exactCenterX() < splitX }
+        val right = els.filter { it.box.exactCenterX() >= splitX }
 
-        val (left, right) = lines.partition { it.box.left < splitX }
-        // 2) 한쪽이 전체의 15% 미만이면 사실상 단일 단 → 위→아래로만 정렬.
-        val minor = minOf(left.size, right.size)
-        val ordered = if (minor < lines.size * 0.15f) {
-            lines.sortedBy { it.box.top }
+        // 양쪽 단에 충분한 글자가 있으면 2단으로 보고 좌→우, 아니면 단일 단.
+        return if (left.size >= 4 && right.size >= 4) {
+            rebuild(left) + "\n" + rebuild(right)
         } else {
-            left.sortedBy { it.box.top } + right.sortedBy { it.box.top }
+            rebuild(els)
         }
-        return ordered.joinToString("\n") { it.text }
+    }
+
+    /** 글자들을 같은 줄(행)끼리 묶어 위→아래로, 각 행은 좌→우로 이어 붙인다. */
+    private fun rebuild(els: List<El>): String {
+        if (els.isEmpty()) return ""
+        val heights = els.map { it.box.height() }.sorted()
+        val medianH = heights[heights.size / 2].coerceAtLeast(1)
+        val rowGap = medianH * 0.6f
+
+        val sorted = els.sortedBy { it.box.exactCenterY() }
+        val rows = ArrayList<MutableList<El>>()
+        var rowY = Float.NEGATIVE_INFINITY
+        for (e in sorted) {
+            val cy = e.box.exactCenterY()
+            if (rows.isEmpty() || cy - rowY > rowGap) {
+                rows.add(mutableListOf(e))
+            } else {
+                rows.last().add(e)
+            }
+            rowY = rows.last().map { it.box.exactCenterY() }.average().toFloat()
+        }
+        return rows.joinToString("\n") { row ->
+            row.sortedBy { it.box.left }.joinToString(" ") { it.text }
+        }
     }
 }
