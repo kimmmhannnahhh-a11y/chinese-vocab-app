@@ -13,9 +13,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -56,9 +55,9 @@ fun HomeScreen(
             )
             TodayWordCard(today)
             Spacer(Modifier.height(16.dp))
-            MenuRow(Icons.AutoMirrored.Filled.MenuBook, "단어 추가 (교재 촬영·직접입력)", onAddVocab)
+            MenuRow(Icons.Filled.PhotoCamera, "단어 추가", onAddVocab)
             Spacer(Modifier.height(12.dp))
-            MenuRow(Icons.AutoMirrored.Filled.Chat, "회화 추가 (교재 촬영)", onAddDialogue)
+            MenuRow(Icons.Filled.PhotoCamera, "회화 추가", onAddDialogue)
             Spacer(Modifier.height(12.dp))
             MenuRow(Icons.Filled.Search, "단어찾기 · 품사별", onSearchClick)
         }

@@ -19,7 +19,7 @@ class AddViewModel @Inject constructor(
     private val repo: AppRepository,
 ) : ViewModel() {
 
-    val title = MutableStateFlow("3-1")   // "권-과" 형식
+    val title = MutableStateFlow("")   // "권-과" 형식. 비워두면 입력 힌트(예: 3-1)만 표시
     val pasteText = MutableStateFlow("")
 
     /** 붙여넣기 텍스트(뜻\t병음\t한자) 미리보기. */

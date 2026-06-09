@@ -129,7 +129,7 @@ fun VocabScreen(vm: VocabViewModel = hiltViewModel()) {
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Icon(Icons.Filled.DeleteOutline, null, tint = DangerRed, modifier = Modifier.size(16.dp))
-                                Text("  $title 단원 전체 삭제", color = DangerRed, fontSize = 13.sp)
+                                Text("  $title 단어 전체 삭제", color = DangerRed, fontSize = 13.sp)
                             }
                         }
                     }
@@ -141,11 +141,11 @@ fun VocabScreen(vm: VocabViewModel = hiltViewModel()) {
     if (showDeleteUnit) {
         AlertDialog(
             onDismissRequest = { showDeleteUnit = false },
-            title = { Text("$title 단원 삭제") },
-            text = { Text("이 단원의 단어와 회화가 모두 삭제돼요. 되돌릴 수 없어요.") },
+            title = { Text("$title 단어 전체 삭제") },
+            text = { Text("이 단원의 단어가 모두 삭제돼요. (회화는 유지됩니다) 되돌릴 수 없어요.") },
             confirmButton = {
-                TextButton(onClick = { vm.deleteCurrentUnit(); showDeleteUnit = false }) {
-                    Text("전체 삭제", color = DangerRed)
+                TextButton(onClick = { vm.deleteCurrentUnitVocab(); showDeleteUnit = false }) {
+                    Text("단어 전체 삭제", color = DangerRed)
                 }
             },
             dismissButton = { TextButton(onClick = { showDeleteUnit = false }) { Text("취소") } },

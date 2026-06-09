@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
@@ -53,13 +54,17 @@ import com.example.chineselock.ui.SpeakerTag
 import com.example.chineselock.ui.theme.AppColors
 
 @Composable
-fun ConversationScreen(vm: ConversationViewModel = hiltViewModel()) {
+fun ConversationScreen(
+    onCaptureTranslation: (Long) -> Unit = {},
+    vm: ConversationViewModel = hiltViewModel(),
+) {
     val units by vm.units.collectAsStateWithLifecycle()
     val selectedId by vm.selectedUnitId.collectAsStateWithLifecycle()
     val turns by vm.turns.collectAsStateWithLifecycle()
     val showTranslation by vm.showTranslation.collectAsStateWithLifecycle()
     val editMode by vm.editMode.collectAsStateWithLifecycle()
     var showAdd by remember { mutableStateOf(false) }
+    var showDeleteAll by remember { mutableStateOf(false) }
 
     val title = units.firstOrNull { it.id == selectedId }?.title ?: "—"
     val section = turns.firstOrNull()
@@ -89,6 +94,20 @@ fun ConversationScreen(vm: ConversationViewModel = hiltViewModel()) {
                     PlayAllButton(vm::playAll)
                 }
                 Spacer(Modifier.height(6.dp))
+                if (showTranslation && turns.isNotEmpty()) {
+                    Row(
+                        Modifier.fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .border(1.dp, AppColors.Faint, RoundedCornerShape(12.dp))
+                            .clickable { selectedId?.let(onCaptureTranslation) }
+                            .padding(11.dp),
+                        horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(Icons.Filled.PhotoCamera, null, tint = AppColors.Purple, modifier = Modifier.size(15.dp))
+                        Text("  번역 페이지 촬영해서 채우기", color = AppColors.Purple, fontSize = 13.sp)
+                    }
+                    Spacer(Modifier.height(6.dp))
+                }
             } else {
                 Text("문장을 삭제하거나 새 문장을 추가하세요", color = AppColors.Sub, fontSize = 11.sp,
                     modifier = Modifier.padding(bottom = 6.dp))
@@ -112,6 +131,20 @@ fun ConversationScreen(vm: ConversationViewModel = hiltViewModel()) {
                             Text("  문장 추가", color = AppColors.Purple, fontSize = 13.sp)
                         }
                     }
+                    if (selectedId != null && turns.isNotEmpty()) {
+                        item {
+                            Row(
+                                Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 20.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .border(1.dp, DangerRed.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                                    .clickable { showDeleteAll = true }.padding(11.dp),
+                                horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Icon(Icons.Filled.DeleteOutline, null, tint = DangerRed, modifier = Modifier.size(16.dp))
+                                Text("  $title 회화 전체 삭제", color = DangerRed, fontSize = 13.sp)
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -122,7 +155,23 @@ fun ConversationScreen(vm: ConversationViewModel = hiltViewModel()) {
             vm.addLine(sp, zh, pin, ko); showAdd = false
         }
     }
+
+    if (showDeleteAll) {
+        AlertDialog(
+            onDismissRequest = { showDeleteAll = false },
+            title = { Text("$title 회화 전체 삭제") },
+            text = { Text("이 단원의 회화가 모두 삭제돼요. (단어는 유지됩니다) 되돌릴 수 없어요.") },
+            confirmButton = {
+                TextButton(onClick = { vm.deleteAllDialogues(); showDeleteAll = false }) {
+                    Text("회화 전체 삭제", color = DangerRed)
+                }
+            },
+            dismissButton = { TextButton(onClick = { showDeleteAll = false }) { Text("취소") } },
+        )
+    }
 }
+
+private val DangerRed = Color(0xFFD14D4D)
 
 @Composable
 private fun TurnRow(t: Dialogue, showTranslation: Boolean, editMode: Boolean, onSpeak: () -> Unit, onDelete: () -> Unit) {

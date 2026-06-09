@@ -32,6 +32,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -68,14 +69,18 @@ import com.google.mlkit.vision.common.InputImage
 fun CaptureScreen(
     onBack: () -> Unit,
     mode: CaptureMode = CaptureMode.VOCAB,
+    unitId: Long? = null,
     vm: CaptureViewModel = hiltViewModel(),
 ) {
     val ui by vm.ui.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    LaunchedEffect(mode) { vm.setMode(mode) }
+    LaunchedEffect(mode, unitId) { vm.configure(mode, unitId) }
 
-    val isVocab = ui.mode == CaptureMode.VOCAB
-    val unitLabel = if (isVocab) "단어" else "문장"
+    val unitLabel = when (ui.mode) {
+        CaptureMode.VOCAB -> "단어"
+        CaptureMode.DIALOGUE -> "문장"
+        CaptureMode.TRANSLATION -> "번역"
+    }
 
     var hasPermission by remember {
         mutableStateOf(
@@ -92,8 +97,11 @@ fun CaptureScreen(
             CaptureViewModel.Phase.CAMERA ->
                 if (hasPermission) {
                     CameraView(
-                        guide = if (isVocab) "단어 페이지를 화면에 꽉 차게 맞추고 촬영하세요"
-                                else "회화 페이지를 화면에 꽉 차게 맞추고 촬영하세요",
+                        guide = when (ui.mode) {
+                            CaptureMode.VOCAB -> "단어 페이지를 화면에 꽉 차게 맞추고 촬영하세요"
+                            CaptureMode.DIALOGUE -> "회화 페이지를 화면에 꽉 차게 맞추고 촬영하세요"
+                            CaptureMode.TRANSLATION -> "해석(번역) 페이지를 화면에 꽉 차게 맞추고 촬영하세요"
+                        },
                         onCaptured = vm::onImageCaptured,
                         onBack = onBack,
                     )
@@ -108,9 +116,11 @@ fun CaptureScreen(
 
             CaptureViewModel.Phase.REVIEW -> ReviewView(
                 ui = ui,
+                unitLabel = unitLabel,
                 onTitle = vm::setTitle,
                 onRemove = vm::removeItem,
                 onRetake = vm::retake,
+                onCaptureMore = vm::captureMore,
                 onSave = {
                     vm.save(System.currentTimeMillis()) { n ->
                         Toast.makeText(context, "${n}개 ${unitLabel}을 등록했어요", Toast.LENGTH_SHORT).show()
@@ -226,36 +236,47 @@ private fun ProcessingView() {
 @Composable
 private fun ReviewView(
     ui: CaptureViewModel.UiState,
+    unitLabel: String,
     onTitle: (String) -> Unit,
     onRemove: (Int) -> Unit,
     onRetake: () -> Unit,
+    onCaptureMore: () -> Unit,
     onSave: () -> Unit,
 ) {
-    val isVocab = ui.mode == CaptureMode.VOCAB
-    val unit = if (isVocab) "단어" else "문장"
     Column(
         Modifier.fillMaxSize().padding(horizontal = 16.dp).verticalScroll(rememberScrollState())
     ) {
         Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onRetake) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "다시 찍기") }
+            IconButton(onClick = onRetake) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "처음부터") }
             Text("인식 결과", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
         }
 
-        Text("제목 (단원)", color = AppColors.Sub, fontSize = 11.sp, modifier = Modifier.padding(top = 6.dp, bottom = 4.dp))
-        OutlinedTextField(
-            value = ui.title, onValueChange = onTitle, singleLine = true,
-            placeholder = { Text("예: 3-1") }, modifier = Modifier.fillMaxWidth(),
-        )
+        if (ui.mode == CaptureMode.TRANSLATION) {
+            Text(
+                "회화 문장 순서대로 위에서부터 번역이 채워져요.",
+                color = AppColors.Sub, fontSize = 11.sp, modifier = Modifier.padding(top = 6.dp),
+            )
+        } else {
+            Text("제목 (단원)", color = AppColors.Sub, fontSize = 11.sp, modifier = Modifier.padding(top = 6.dp, bottom = 4.dp))
+            OutlinedTextField(
+                value = ui.title, onValueChange = onTitle, singleLine = true,
+                placeholder = { Text("예: 3-1", color = AppColors.Muted) }, modifier = Modifier.fillMaxWidth(),
+            )
+        }
+
+        if (ui.error != null) {
+            Text("⚠ ${ui.error}", color = Color(0xFFC24062), fontSize = 11.sp, modifier = Modifier.padding(top = 10.dp))
+        }
 
         Text(
-            "인식된 $unit ${ui.count}개 — 틀린 항목은 X로 빼고 등록하세요",
+            "인식된 $unitLabel ${ui.count}개 — 틀린 항목은 X로 빼고 등록하세요",
             color = AppColors.Sub, fontSize = 11.sp, modifier = Modifier.padding(top = 14.dp, bottom = 4.dp),
         )
         Column(
             Modifier.fillMaxWidth().border(1.dp, AppColors.Line, RoundedCornerShape(14.dp)).padding(horizontal = 14.dp),
         ) {
-            if (isVocab) {
-                ui.items.forEachIndexed { index, item ->
+            when (ui.mode) {
+                CaptureMode.VOCAB -> ui.items.forEachIndexed { index, item ->
                     Row(Modifier.fillMaxWidth().padding(vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text(item.hanzi, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(end = 10.dp))
                         Column(Modifier.weight(1f)) {
@@ -270,8 +291,7 @@ private fun ReviewView(
                         }
                     }
                 }
-            } else {
-                ui.lines.forEachIndexed { index, line ->
+                CaptureMode.DIALOGUE -> ui.lines.forEachIndexed { index, line ->
                     val speaker = line.speaker
                     val pinyin = line.pinyin
                     Row(Modifier.fillMaxWidth().padding(vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -290,15 +310,29 @@ private fun ReviewView(
                         }
                     }
                 }
+                CaptureMode.TRANSLATION -> ui.translations.forEachIndexed { index, ko ->
+                    Row(Modifier.fillMaxWidth().padding(vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text("${index + 1}", color = AppColors.Muted, fontSize = 12.sp, modifier = Modifier.width(22.dp))
+                        Text(ko, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                        IconButton(onClick = { onRemove(index) }) {
+                            Icon(Icons.Filled.Close, "제외", tint = AppColors.Muted)
+                        }
+                    }
+                }
             }
         }
 
         Spacer(Modifier.height(16.dp))
-        Button(onClick = onSave, enabled = ui.count > 0, modifier = Modifier.fillMaxWidth()) {
-            Text("${ui.count}개 $unit 등록")
+        OutlinedButton(onClick = onCaptureMore, modifier = Modifier.fillMaxWidth()) {
+            Icon(Icons.Filled.PhotoCamera, contentDescription = null, modifier = Modifier.size(18.dp).padding(end = 6.dp))
+            Text("사진 더 찍기 (이어서 추가)")
         }
         Spacer(Modifier.height(8.dp))
-        OutlinedButton(onClick = onRetake, modifier = Modifier.fillMaxWidth()) { Text("다시 찍기") }
+        Button(onClick = onSave, enabled = ui.count > 0, modifier = Modifier.fillMaxWidth()) {
+            Text("${ui.count}개 $unitLabel 등록")
+        }
+        Spacer(Modifier.height(8.dp))
+        OutlinedButton(onClick = onRetake, modifier = Modifier.fillMaxWidth()) { Text("처음부터 다시") }
         Spacer(Modifier.height(24.dp))
     }
 }

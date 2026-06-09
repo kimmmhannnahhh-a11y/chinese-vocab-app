@@ -43,7 +43,11 @@ class VocabViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             units.collect { list ->
-                if (_selectedUnitId.value == null && list.isNotEmpty()) {
+                val cur = _selectedUnitId.value
+                if (list.isEmpty()) {
+                    _selectedUnitId.value = null
+                } else if (cur == null || list.none { it.id == cur }) {
+                    // 선택한 단원이 사라졌거나 미선택이면 첫 단원으로 자동 복구
                     _selectedUnitId.value = list.first().id
                 }
             }
@@ -60,12 +64,11 @@ class VocabViewModel @Inject constructor(
     fun toggleFavorite(v: Vocab) = viewModelScope.launch { repo.setFavorite(v.id, !v.isFavorite) }
     fun delete(v: Vocab) = viewModelScope.launch { repo.deleteVocab(v.id) }
 
-    /** 현재 선택한 단원을 통째로 삭제(단어·회화 전부). 삭제 후 첫 단원 재선택. */
-    fun deleteCurrentUnit() {
+    /** 현재 단원의 '단어만' 전체 삭제(회화는 보존). 단원·선택은 유지. */
+    fun deleteCurrentUnitVocab() {
         val id = _selectedUnitId.value ?: return
         viewModelScope.launch {
-            repo.deleteUnit(id)
-            _selectedUnitId.value = null   // init 콜렉터가 남은 첫 단원을 다시 선택
+            repo.deleteVocabForUnit(id)
             editMode.value = false
         }
     }

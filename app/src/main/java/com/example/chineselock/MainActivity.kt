@@ -19,6 +19,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -91,7 +93,11 @@ private fun AppRoot() {
                 )
             }
             composable(Tab.Vocab.route) { VocabScreen() }
-            composable(Tab.Conversation.route) { ConversationScreen() }
+            composable(Tab.Conversation.route) {
+                ConversationScreen(
+                    onCaptureTranslation = { unitId -> nav.navigate("capture/translation/$unitId") },
+                )
+            }
             composable(Tab.Favorites.route) { FavoritesScreen() }
             composable("search") { WordSearchScreen(onBack = { nav.popBackStack() }) }
             composable("add") {
@@ -105,6 +111,16 @@ private fun AppRoot() {
             }
             composable("capture/dialogue") {
                 CaptureScreen(onBack = { nav.popBackStack() }, mode = CaptureMode.DIALOGUE)
+            }
+            composable(
+                "capture/translation/{unitId}",
+                arguments = listOf(navArgument("unitId") { type = NavType.LongType }),
+            ) { entry ->
+                CaptureScreen(
+                    onBack = { nav.popBackStack() },
+                    mode = CaptureMode.TRANSLATION,
+                    unitId = entry.arguments?.getLong("unitId"),
+                )
             }
         }
     }

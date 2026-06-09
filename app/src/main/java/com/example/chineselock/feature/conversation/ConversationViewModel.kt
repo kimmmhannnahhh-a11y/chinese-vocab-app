@@ -40,7 +40,12 @@ class ConversationViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             units.collect { list ->
-                if (_selectedUnitId.value == null && list.isNotEmpty()) _selectedUnitId.value = list.first().id
+                val cur = _selectedUnitId.value
+                if (list.isEmpty()) {
+                    _selectedUnitId.value = null
+                } else if (cur == null || list.none { it.id == cur }) {
+                    _selectedUnitId.value = list.first().id
+                }
             }
         }
     }
@@ -48,6 +53,15 @@ class ConversationViewModel @Inject constructor(
     fun selectUnit(id: Long) { _selectedUnitId.value = id }
     fun setTranslation(v: Boolean) { showTranslation.value = v }
     fun toggleEdit() { editMode.value = !editMode.value }
+
+    /** 현재 단원의 '회화만' 전체 삭제(단어는 보존). */
+    fun deleteAllDialogues() {
+        val id = _selectedUnitId.value ?: return
+        viewModelScope.launch {
+            repo.deleteDialoguesForUnit(id)
+            editMode.value = false
+        }
+    }
 
     fun speak(text: String) = tts.speak(text)
     fun playAll() = tts.speakSequence(turns.value.map { it.chinese })

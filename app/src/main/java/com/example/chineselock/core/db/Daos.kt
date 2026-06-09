@@ -38,6 +38,9 @@ interface VocabDao {
     @Update fun update(item: Vocab)
     @Query("DELETE FROM vocab WHERE id = :id") fun deleteById(id: Long)
 
+    /** 단원의 단어만 전체 삭제(회화는 보존). vocab_pos는 CASCADE로 함께 삭제. */
+    @Query("DELETE FROM vocab WHERE unitId = :unitId") fun deleteByUnit(unitId: Long)
+
     @Query("SELECT * FROM vocab WHERE unitId = :unitId ORDER BY orderInUnit")
     fun observeByUnit(unitId: Long): Flow<List<Vocab>>
 
@@ -105,10 +108,17 @@ interface DialogueDao {
     @Query("SELECT * FROM dialogue WHERE unitId = :unitId ORDER BY orderInUnit")
     fun observeByUnit(unitId: Long): Flow<List<Dialogue>>
 
+    /** 번역 매칭용: 단원의 회화를 순서대로 1회 조회(Flow 아님). */
+    @Query("SELECT * FROM dialogue WHERE unitId = :unitId ORDER BY orderInUnit")
+    fun getByUnit(unitId: Long): List<Dialogue>
+
     // 수정(편집): 문장 추가 / 수정 / 삭제
     @Insert fun insert(item: Dialogue): Long
     @Update fun update(item: Dialogue)
     @Query("DELETE FROM dialogue WHERE id = :id") fun deleteById(id: Long)
+
+    /** 단원의 회화만 전체 삭제(단어는 보존). */
+    @Query("DELETE FROM dialogue WHERE unitId = :unitId") fun deleteByUnit(unitId: Long)
 }
 
 @Dao

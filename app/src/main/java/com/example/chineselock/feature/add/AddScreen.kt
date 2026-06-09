@@ -56,7 +56,7 @@ fun AddScreen(onBack: () -> Unit, onCapture: () -> Unit = {}, vm: AddViewModel =
             Text("제목 (단원)", color = AppColors.Sub, fontSize = 11.sp, modifier = Modifier.padding(top = 6.dp, bottom = 4.dp))
             OutlinedTextField(
                 value = title, onValueChange = vm::setTitle, singleLine = true,
-                placeholder = { Text("예: 3-1") }, modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("예: 3-1", color = AppColors.Muted) }, modifier = Modifier.fillMaxWidth(),
             )
 
             Spacer(Modifier.height(14.dp))
@@ -71,7 +71,7 @@ fun AddScreen(onBack: () -> Unit, onCapture: () -> Unit = {}, vm: AddViewModel =
             )
             OutlinedTextField(
                 value = paste, onValueChange = vm::setPaste,
-                placeholder = { Text("다음에\txiàcì\t下次") },
+                placeholder = { Text("다음에\txiàcì\t下次", color = AppColors.Muted) },
                 modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp),
             )
 

@@ -37,6 +37,12 @@ class AppRepository @Inject constructor(
     /** 단원 통째로 삭제(단어·품사·회화 CASCADE). */
     suspend fun deleteUnit(unitId: Long) = withContext(Dispatchers.IO) { unitDao.deleteById(unitId) }
 
+    /** 단원의 '단어만' 전체 삭제(회화는 보존). */
+    suspend fun deleteVocabForUnit(unitId: Long) = withContext(Dispatchers.IO) { vocabDao.deleteByUnit(unitId) }
+
+    /** 단원의 '회화만' 전체 삭제(단어는 보존). */
+    suspend fun deleteDialoguesForUnit(unitId: Long) = withContext(Dispatchers.IO) { dialogueDao.deleteByUnit(unitId) }
+
     // --- 단어 ---
     fun observeVocab(unitId: Long): Flow<List<Vocab>> = vocabDao.observeByUnit(unitId)
     fun observeByPartOfSpeech(pos: String): Flow<List<Vocab>> = vocabDao.observeByPartOfSpeech(pos)
@@ -84,6 +90,16 @@ class AppRepository @Inject constructor(
     suspend fun deleteDialogue(id: Long) = withContext(Dispatchers.IO) { dialogueDao.deleteById(id) }
     suspend fun addDialogue(d: Dialogue): Long = withContext(Dispatchers.IO) { dialogueDao.insert(d) }
     suspend fun addDialogueBatch(items: List<Dialogue>) = withContext(Dispatchers.IO) { dialogueDao.insertAll(items) }
+
+    /** 해석 페이지에서 뽑은 한국어를 회화 문장에 순서대로 매칭해 채운다. 채운 개수 반환. */
+    suspend fun applyTranslations(unitId: Long, koreanLines: List<String>): Int = withContext(Dispatchers.IO) {
+        val dialogues = dialogueDao.getByUnit(unitId)
+        val n = minOf(dialogues.size, koreanLines.size)
+        for (i in 0 until n) {
+            dialogueDao.update(dialogues[i].copy(korean = koreanLines[i]))
+        }
+        n
+    }
 
     // --- 노트 ---
     fun observeNotes(): Flow<List<CustomNote>> = noteDao.observeAll()
