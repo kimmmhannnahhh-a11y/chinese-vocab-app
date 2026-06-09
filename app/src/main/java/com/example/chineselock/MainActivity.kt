@@ -24,6 +24,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.chineselock.feature.add.AddScreen
+import com.example.chineselock.feature.capture.CaptureScreen
 import com.example.chineselock.feature.conversation.ConversationScreen
 import com.example.chineselock.feature.favorites.FavoritesScreen
 import com.example.chineselock.feature.home.HomeScreen
@@ -91,7 +92,13 @@ private fun AppRoot() {
             composable(Tab.Conversation.route) { ConversationScreen() }
             composable(Tab.Favorites.route) { FavoritesScreen() }
             composable("search") { WordSearchScreen(onBack = { nav.popBackStack() }) }
-            composable("add") { AddScreen(onBack = { nav.popBackStack() }) }
+            composable("add") {
+                AddScreen(
+                    onBack = { nav.popBackStack() },
+                    onCapture = { nav.navigate("capture") },
+                )
+            }
+            composable("capture") { CaptureScreen(onBack = { nav.popBackStack() }) }
         }
     }
 }

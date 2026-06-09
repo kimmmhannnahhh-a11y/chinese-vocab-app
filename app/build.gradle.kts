@@ -9,7 +9,7 @@ plugins {
     alias(libs.plugins.hilt)
 }
 
-// Load OpenAI key from secrets.properties (gitignored). Never hardcode keys in source.
+// Load API keys from secrets.properties (gitignored). Never hardcode keys in source.
 val secrets = Properties().apply {
     val f = rootProject.file("secrets.properties")
     if (f.exists()) f.inputStream().use { load(it) }
@@ -32,6 +32,12 @@ android {
             "String",
             "OPENAI_API_KEY",
             "\"${secrets.getProperty("OPENAI_API_KEY", "")}\""
+        )
+        // Gemini(무료 티어) 키 — OCR 텍스트 구조화에 사용. Google AI Studio에서 발급.
+        buildConfigField(
+            "String",
+            "GEMINI_API_KEY",
+            "\"${secrets.getProperty("GEMINI_API_KEY", "")}\""
         )
     }
 

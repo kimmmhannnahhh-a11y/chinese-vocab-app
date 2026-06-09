@@ -1,57 +1,48 @@
 package com.example.chineselock.core.network
 
+import com.example.chineselock.BuildConfig
 import kotlinx.serialization.json.Json
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * OCR raw text -> GPT-4o(JSON 모드) -> 구조화 데이터.
+ * OCR raw text -> Gemini(JSON 모드) -> 구조화 데이터.
  * 호출은 "촬영 시 1회"만. 결과는 호출부에서 DB에 영구 저장하여 이후 비용 0.
+ * Google AI Studio 무료 티어 키 사용(GEMINI_API_KEY).
  */
 @Singleton
 class OcrStructurer @Inject constructor(
-    private val service: OpenAiService,
+    private val gemini: GeminiService,
 ) {
     private val json = Json { ignoreUnknownKeys = true }
 
-    suspend fun structureVocab(rawOcrText: String): VocabExtraction {
-        val resp = service.chat(
-            ChatRequest(
-                messages = listOf(
-                    ChatMessage("system", VOCAB_SYSTEM_PROMPT),
-                    ChatMessage("user", rawOcrText),
-                ),
-            )
+    /** system + user 1턴 호출 → 모델이 돌려준 JSON 문자열 반환. */
+    private suspend fun complete(systemPrompt: String, userText: String): String {
+        val resp = gemini.generate(
+            model = MODEL,
+            apiKey = BuildConfig.GEMINI_API_KEY,
+            request = GeminiRequest(
+                systemInstruction = GeminiContent(parts = listOf(GeminiPart(systemPrompt))),
+                contents = listOf(GeminiContent(parts = listOf(GeminiPart(userText)))),
+            ),
         )
-        return json.decodeFromString(resp.choices.first().message.content)
+        return resp.candidates.firstOrNull()?.content?.parts?.firstOrNull()?.text
+            ?: error("Gemini 응답이 비어 있어요. 키/네트워크를 확인해주세요.")
     }
 
-    suspend fun structureDialogue(rawOcrText: String): DialogueExtraction {
-        val resp = service.chat(
-            ChatRequest(
-                messages = listOf(
-                    ChatMessage("system", DIALOGUE_SYSTEM_PROMPT),
-                    ChatMessage("user", rawOcrText),
-                ),
-            )
-        )
-        return json.decodeFromString(resp.choices.first().message.content)
-    }
+    suspend fun structureVocab(rawOcrText: String): VocabExtraction =
+        json.decodeFromString(complete(VOCAB_SYSTEM_PROMPT, rawOcrText))
+
+    suspend fun structureDialogue(rawOcrText: String): DialogueExtraction =
+        json.decodeFromString(complete(DIALOGUE_SYSTEM_PROMPT, rawOcrText))
 
     /** 해석 페이지(한국어만)를 줄 순서대로 추출. 회화 문장과 순서로 매칭하는 데 사용. */
-    suspend fun structureTranslation(rawOcrText: String): TranslationExtraction {
-        val resp = service.chat(
-            ChatRequest(
-                messages = listOf(
-                    ChatMessage("system", TRANSLATION_SYSTEM_PROMPT),
-                    ChatMessage("user", rawOcrText),
-                ),
-            )
-        )
-        return json.decodeFromString(resp.choices.first().message.content)
-    }
+    suspend fun structureTranslation(rawOcrText: String): TranslationExtraction =
+        json.decodeFromString(complete(TRANSLATION_SYSTEM_PROMPT, rawOcrText))
 
     private companion object {
+        const val MODEL = "gemini-2.0-flash"
+
         const val VOCAB_SYSTEM_PROMPT = """
 너는 중국어 교재 단어 페이지 OCR 텍스트를 표로 구조화하는 도우미다. 출력은 반드시 유효한 JSON 하나뿐.
 교재 단어는 [한자 | 병음 | (품사) | 한국어 뜻] 형태이며 '회화 단어/어법 단어/고유명사' 같은 섹션으로 묶여 있다.

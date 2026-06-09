@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -39,7 +40,7 @@ import com.example.chineselock.ui.PosBoxes
 import com.example.chineselock.ui.theme.AppColors
 
 @Composable
-fun AddScreen(onBack: () -> Unit, vm: AddViewModel = hiltViewModel()) {
+fun AddScreen(onBack: () -> Unit, onCapture: () -> Unit = {}, vm: AddViewModel = hiltViewModel()) {
     val title by vm.title.collectAsStateWithLifecycle()
     val paste by vm.pasteText.collectAsStateWithLifecycle()
     val preview by vm.preview.collectAsStateWithLifecycle()
@@ -58,8 +59,14 @@ fun AddScreen(onBack: () -> Unit, vm: AddViewModel = hiltViewModel()) {
                 placeholder = { Text("예: 3-1") }, modifier = Modifier.fillMaxWidth(),
             )
 
+            Spacer(Modifier.height(14.dp))
+            Button(onClick = onCapture, modifier = Modifier.fillMaxWidth()) {
+                Icon(Icons.Filled.PhotoCamera, contentDescription = null, modifier = Modifier.padding(end = 8.dp))
+                Text("교재 촬영해서 단어 자동 추가")
+            }
+
             Text(
-                "직접 입력 — 뜻 / 병음 / 한자 (탭 또는 콤마 구분, 줄바꿈으로 여러 개)",
+                "또는 직접 입력 — 뜻 / 병음 / 한자 (탭 또는 콤마 구분, 줄바꿈으로 여러 개)",
                 color = AppColors.Sub, fontSize = 11.sp, modifier = Modifier.padding(top = 14.dp, bottom = 4.dp),
             )
             OutlinedTextField(
@@ -100,11 +107,7 @@ fun AddScreen(onBack: () -> Unit, vm: AddViewModel = hiltViewModel()) {
                 modifier = Modifier.fillMaxWidth(),
             ) { Text("${preview.size}개 단어 등록") }
 
-            Spacer(Modifier.height(8.dp))
-            Text(
-                "교재 촬영(OCR→자동 구조화)은 다음 단계에서 연결됩니다.",
-                color = AppColors.Muted, fontSize = 11.sp, modifier = Modifier.padding(bottom = 24.dp),
-            )
+            Spacer(Modifier.height(24.dp))
         }
     }
 }
