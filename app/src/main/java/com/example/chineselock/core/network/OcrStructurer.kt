@@ -1,12 +1,14 @@
 package com.example.chineselock.core.network
 
+import android.util.Base64
 import com.example.chineselock.BuildConfig
 import kotlinx.serialization.json.Json
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * OCR raw text -> Gemini(JSON 모드) -> 구조화 데이터.
+ * 교재 사진 -> Gemini Vision(멀티모달, JSON 모드) -> 구조화 데이터.
+ * Gemini가 사진을 직접 읽으므로 회전/2단/손글씨를 알아서 처리하고, 사진에 없는 단어를 지어내지 않는다.
  * 호출은 "촬영 시 1회"만. 결과는 호출부에서 DB에 영구 저장하여 이후 비용 0.
  * Google AI Studio 무료 티어 키 사용(GEMINI_API_KEY).
  */
@@ -16,29 +18,36 @@ class OcrStructurer @Inject constructor(
 ) {
     private val json = Json { ignoreUnknownKeys = true }
 
-    /** system + user 1턴 호출 → 모델이 돌려준 JSON 문자열 반환. */
-    private suspend fun complete(systemPrompt: String, userText: String): String {
+    /** system 지시 + (사용자 텍스트 + 이미지) 1턴 호출 → 모델이 돌려준 JSON 문자열. */
+    private suspend fun completeWithImage(systemPrompt: String, jpeg: ByteArray): String {
+        val b64 = Base64.encodeToString(jpeg, Base64.NO_WRAP)
         val resp = gemini.generate(
             model = MODEL,
             apiKey = BuildConfig.GEMINI_API_KEY,
             request = GeminiRequest(
-                systemInstruction = GeminiContent(parts = listOf(GeminiPart(systemPrompt))),
-                contents = listOf(GeminiContent(parts = listOf(GeminiPart(userText)))),
+                systemInstruction = GeminiContent(parts = listOf(GeminiPart(text = systemPrompt))),
+                contents = listOf(
+                    GeminiContent(
+                        parts = listOf(
+                            GeminiPart(text = "이 교재 페이지 사진을 규칙대로 JSON으로 정리해줘."),
+                            GeminiPart(inlineData = GeminiInlineData(mimeType = "image/jpeg", data = b64)),
+                        )
+                    )
+                ),
             ),
         )
-        return resp.candidates.firstOrNull()?.content?.parts?.firstOrNull()?.text
+        return resp.candidates.firstOrNull()?.content?.parts?.firstOrNull { it.text != null }?.text
             ?: error("Gemini 응답이 비어 있어요. 키/네트워크를 확인해주세요.")
     }
 
-    suspend fun structureVocab(rawOcrText: String): VocabExtraction =
-        json.decodeFromString(complete(VOCAB_SYSTEM_PROMPT, rawOcrText))
+    suspend fun structureVocabFromImage(jpeg: ByteArray): VocabExtraction =
+        json.decodeFromString(completeWithImage(VOCAB_SYSTEM_PROMPT, jpeg))
 
-    suspend fun structureDialogue(rawOcrText: String): DialogueExtraction =
-        json.decodeFromString(complete(DIALOGUE_SYSTEM_PROMPT, rawOcrText))
+    suspend fun structureDialogueFromImage(jpeg: ByteArray): DialogueExtraction =
+        json.decodeFromString(completeWithImage(DIALOGUE_SYSTEM_PROMPT, jpeg))
 
-    /** 해석 페이지(한국어만)를 줄 순서대로 추출. 회화 문장과 순서로 매칭하는 데 사용. */
-    suspend fun structureTranslation(rawOcrText: String): TranslationExtraction =
-        json.decodeFromString(complete(TRANSLATION_SYSTEM_PROMPT, rawOcrText))
+    suspend fun structureTranslationFromImage(jpeg: ByteArray): TranslationExtraction =
+        json.decodeFromString(completeWithImage(TRANSLATION_SYSTEM_PROMPT, jpeg))
 
     private companion object {
         // gemini-2.0-flash는 일부 프로젝트에서 무료 할당량이 0(429)이라 사용 불가.
@@ -46,7 +55,14 @@ class OcrStructurer @Inject constructor(
         const val MODEL = "gemini-2.5-flash-lite"
 
         const val VOCAB_SYSTEM_PROMPT = """
-너는 중국어 교재 단어 페이지 OCR 텍스트를 표로 구조화하는 도우미다. 출력은 반드시 유효한 JSON 하나뿐.
+너는 중국어 교재 단어 페이지 '사진'을 직접 읽어 표로 구조화하는 도우미다. 출력은 반드시 유효한 JSON 하나뿐.
+
+[환각 금지 — 가장 중요]
+사진에 '실제로 인쇄되어 보이는' 단어만 추출하라. 사진에 없는 단어를 절대 지어내지 마라. 글자가 흐릿해 안 보이면 추측하지 말고 그 항목을 건너뛰어라. (예: 사진에 없는 中国人, 是, 西, 哈, 数 같은 단어를 임의로 만들면 안 된다.)
+
+[읽는 순서 — 2단 레이아웃]
+사진이 기울거나 회전되어 있어도 글자 방향에 맞춰 똑바로 읽어라.
+페이지가 좌/우 2단이면: 먼저 '왼쪽 단'을 위에서 아래까지 전부 읽고, 그다음 '오른쪽 단'을 위에서 아래까지 읽어라(가로로 번갈아 읽지 마라). 섹션 제목(회화 단어/어법 단어/고유명사) 순서도 그대로 유지.
 
 [무엇을 추출하나]
 교재에 '인쇄된' 단어 목록 항목만 추출한다. 인쇄 항목은 반드시 [한자 + 병음(로마자) + 한국어 뜻]이 한 세트로 같이 있다.
@@ -78,7 +94,8 @@ OCR 오타로 보이는 병음/성조는 한자 기준으로 자연스럽게 교
 """
 
         const val DIALOGUE_SYSTEM_PROMPT = """
-너는 중국어 교재 회화 페이지 OCR 텍스트를 정리하는 도우미다. 출력은 반드시 유효한 JSON 하나뿐.
+너는 중국어 교재 회화 페이지 '사진'을 직접 읽어 정리하는 도우미다. 출력은 반드시 유효한 JSON 하나뿐.
+사진에 실제로 인쇄되어 보이는 문장만 다뤄라. 사진에 없는 문장을 지어내지 마라. 사진이 기울거나 회전돼 있어도 글자에 맞춰 똑바로 읽어라.
 
 [화자 라벨이 턴의 경계다 — 핵심 규칙]
 교재의 각 발화는 줄 맨 앞에 '화자 이름표'로 시작한다. 이름표는 한글 이름(예: 샤오예, 릴리, 나오미, 다니엘), 알파벳(A, B), 또는 사람 이름이다.
@@ -120,8 +137,8 @@ Wǒ hěn hǎo.
 """
 
         const val TRANSLATION_SYSTEM_PROMPT = """
-너는 회화 해석 페이지 OCR 텍스트에서 한국어 문장만 순서대로 뽑는 도우미다. 출력은 반드시 유효한 JSON 하나뿐.
-번호/화자 라벨은 제거하고 한국어 문장 본문만, 페이지에 나온 순서대로 배열에 담아라.
+너는 회화 해석 페이지 '사진'에서 한국어 문장만 순서대로 뽑는 도우미다. 출력은 반드시 유효한 JSON 하나뿐.
+사진에 실제로 인쇄된 한국어 문장만, 나온 순서대로 담아라(없는 문장 지어내기 금지). 번호/화자 라벨은 제거하고 본문만. 손글씨 메모는 무시.
 스키마: { "lines": [ "" ] }
 """
     }

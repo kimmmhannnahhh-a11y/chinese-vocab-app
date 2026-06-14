@@ -8,7 +8,6 @@ import com.example.chineselock.core.network.DialogueItem
 import com.example.chineselock.core.network.OcrStructurer
 import com.example.chineselock.core.network.VocabItem
 import android.graphics.Bitmap
-import com.example.chineselock.core.ocr.OcrTextRecognizer
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -29,7 +28,6 @@ enum class CaptureMode { VOCAB, DIALOGUE, TRANSLATION }
  */
 @HiltViewModel
 class CaptureViewModel @Inject constructor(
-    private val recognizer: OcrTextRecognizer,
     private val structurer: OcrStructurer,
     private val repo: AppRepository,
 ) : ViewModel() {
@@ -67,26 +65,21 @@ class CaptureViewModel @Inject constructor(
 
     fun setTitle(s: String) = _ui.update { it.copy(title = s) }
 
-    /** 촬영 결과 처리. 인식 → 모드별 구조화 → 기존 결과에 누적. 실패 시 안내. */
+    /** 촬영 결과 처리. 사진 → Gemini Vision 구조화 → 기존 결과에 누적. 실패 시 안내. */
     fun onImageCaptured(bitmap: Bitmap) {
-        val twoColumn = _ui.value.mode == CaptureMode.VOCAB
         _ui.update { it.copy(phase = Phase.PROCESSING, error = null) }
         viewModelScope.launch {
             try {
-                val raw = recognizer.recognize(bitmap, twoColumn = twoColumn)
-                if (raw.isBlank()) {
-                    fail("글자를 인식하지 못했어요. 교재에 더 가까이, 밝은 곳에서 다시 찍어보세요.")
-                    return@launch
-                }
+                val jpeg = toJpeg(bitmap)
                 when (_ui.value.mode) {
                     CaptureMode.VOCAB -> {
-                        val ex = structurer.structureVocab(raw)
-                        if (ex.items.isEmpty()) { fail("단어를 정리하지 못했어요. 단어 페이지인지 확인하고 다시 시도해주세요."); return@launch }
+                        val ex = structurer.structureVocabFromImage(jpeg)
+                        if (ex.items.isEmpty()) { fail("단어를 찾지 못했어요. 단어 페이지를 밝고 또렷하게 다시 찍어보세요."); return@launch }
                         _ui.update { it.copy(phase = Phase.REVIEW, items = it.items + ex.items, error = null) }
                     }
                     CaptureMode.DIALOGUE -> {
-                        val ex = structurer.structureDialogue(raw)
-                        if (ex.items.isEmpty()) { fail("회화 문장을 정리하지 못했어요. 회화 페이지인지 확인하고 다시 시도해주세요."); return@launch }
+                        val ex = structurer.structureDialogueFromImage(jpeg)
+                        if (ex.items.isEmpty()) { fail("회화 문장을 찾지 못했어요. 회화 페이지인지 확인하고 다시 시도해주세요."); return@launch }
                         _ui.update {
                             it.copy(
                                 phase = Phase.REVIEW,
@@ -98,7 +91,7 @@ class CaptureViewModel @Inject constructor(
                         }
                     }
                     CaptureMode.TRANSLATION -> {
-                        val ex = structurer.structureTranslation(raw)
+                        val ex = structurer.structureTranslationFromImage(jpeg)
                         if (ex.lines.isEmpty()) { fail("번역 문장을 찾지 못했어요. 해석 페이지인지 확인하고 다시 시도해주세요."); return@launch }
                         _ui.update { it.copy(phase = Phase.REVIEW, translations = it.translations + ex.lines, error = null) }
                     }
@@ -198,5 +191,18 @@ class CaptureViewModel @Inject constructor(
             }
             onDone(st.count)
         }
+    }
+
+    /** 비트맵 → JPEG(긴 변 최대 1568px로 축소). Gemini Vision 전송용. */
+    private fun toJpeg(src: Bitmap): ByteArray {
+        val maxDim = 1568
+        val longest = maxOf(src.width, src.height)
+        val scaled = if (longest > maxDim) {
+            val r = maxDim.toFloat() / longest
+            Bitmap.createScaledBitmap(src, (src.width * r).toInt(), (src.height * r).toInt(), true)
+        } else src
+        val out = java.io.ByteArrayOutputStream()
+        scaled.compress(Bitmap.CompressFormat.JPEG, 88, out)
+        return out.toByteArray()
     }
 }

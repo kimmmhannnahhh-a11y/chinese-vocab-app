@@ -24,11 +24,20 @@ object GeminiModule {
 
     private const val GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/"
 
+    // null 필드를 직렬화에서 빼야 한다(예: 이미지 파트의 text=null). explicitNulls=false.
+    private val geminiJson = Json {
+        ignoreUnknownKeys = true
+        encodeDefaults = true
+        explicitNulls = false
+    }
+
     @Provides
     @Singleton
-    fun provideGeminiService(json: Json): GeminiService {
+    fun provideGeminiService(): GeminiService {
+        val json = geminiJson
         val logging = HttpLoggingInterceptor().apply {
-            level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BODY
+            // BODY로 하면 base64 이미지가 통째로 로그에 찍히므로 BASIC만.
+            level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BASIC
             else HttpLoggingInterceptor.Level.NONE
         }
         val client = OkHttpClient.Builder()
