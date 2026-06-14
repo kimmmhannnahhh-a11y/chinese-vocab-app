@@ -4,6 +4,7 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="com.google.android.gms.permission.AD_ID" />
 
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 
@@ -16,6 +17,11 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.ChineseLockApp"
         tools:targetApi="35">
+
+        <!-- AdMob 앱 ID (현재 구글 공식 '테스트' 앱 ID). 출시 시 실제 ID로 교체. -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-3940256099942544~3347511713" />
 
         <activity
             android:name=".MainActivity"

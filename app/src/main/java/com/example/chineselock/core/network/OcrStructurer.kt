@@ -49,6 +49,26 @@ class OcrStructurer @Inject constructor(
     suspend fun structureTranslationFromImage(jpeg: ByteArray): TranslationExtraction =
         json.decodeFromString(completeWithImage(TRANSLATION_SYSTEM_PROMPT, jpeg))
 
+    /** 오늘의 단어로 짧은 회화 예문 1개 생성(이미지 없이 텍스트만). */
+    suspend fun exampleSentence(hanzi: String, meaning: String): ExampleSentence =
+        json.decodeFromString(
+            completeText(EXAMPLE_SYSTEM_PROMPT, "단어: $hanzi (뜻: $meaning)\n이 단어가 들어간 짧고 자연스러운 회화 문장 1개를 JSON으로 만들어줘.")
+        )
+
+    /** system 지시 + 사용자 텍스트 1턴 호출(이미지 없음) → 모델 JSON 문자열. */
+    private suspend fun completeText(systemPrompt: String, userText: String): String {
+        val resp = gemini.generate(
+            model = MODEL,
+            apiKey = BuildConfig.GEMINI_API_KEY,
+            request = GeminiRequest(
+                systemInstruction = GeminiContent(parts = listOf(GeminiPart(text = systemPrompt))),
+                contents = listOf(GeminiContent(parts = listOf(GeminiPart(text = userText)))),
+            ),
+        )
+        return resp.candidates.firstOrNull()?.content?.parts?.firstOrNull { it.text != null }?.text
+            ?: error("Gemini 응답이 비어 있어요.")
+    }
+
     private companion object {
         // 2.5-flash-lite는 회전/다자 단어/턴 병합에서 오인식이 잦았다(待→等, 烤鸭→烤 등).
         // 2.5-flash로 상향: 정확도가 크게 좋고 무료 티어 쿼터도 별도 버킷이라 사용 가능.
@@ -162,6 +182,15 @@ Wǒ hěn hǎo.
 - 페이지 제목·단원 머리글(예: "본문 해석", "01 …가 본 적 있어요?"), 섹션 번호(①②③), 페이지번호, 트랙 아이콘, 손글씨 메모는 항목이 아니다 → 버려라.
 - 사진에 중국어/병음이 섞여 보여도 한국어 해석만 담아라(중국어는 버림).
 스키마: { "lines": [ "" ] }
+"""
+
+        const val EXAMPLE_SYSTEM_PROMPT = """
+너는 중국어 학습용 예문 생성기다. 출력은 반드시 유효한 JSON 하나뿐.
+주어진 중국어 단어를 자연스럽게 사용한 '짧은 일상 회화 문장' 1개를 만들어라.
+- chinese: 간체자 문장. 주어진 단어를 반드시 포함. 8~16자 권장(너무 길게 쓰지 마라).
+- pinyin: 성조 부호(ā á ǎ à 등)를 포함한 정확한 병음.
+- korean: 자연스러운 한국어 해석.
+스키마: { "chinese": "", "pinyin": "", "korean": "" }
 """
     }
 }

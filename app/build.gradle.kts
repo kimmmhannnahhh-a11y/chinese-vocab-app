@@ -106,4 +106,10 @@ dependencies {
     // Misc
     implementation(libs.coil.compose)
     implementation(libs.androidx.work.runtime.ktx)
+
+    // AdMob (수익화) — 현재 테스트 광고ID 사용. 출시 시 실제 AdMob 앱ID/광고ID로 교체.
+    implementation("com.google.android.gms:play-services-ads:23.6.0")
+    // play-services-ads가 CameraX의 ListenableFuture(guava listenablefuture stub)와 충돌 →
+    // 전체 guava(android)를 명시해 컴파일 클래스패스에 ListenableFuture를 확보.
+    implementation("com.google.guava:guava:33.3.1-android")
 }

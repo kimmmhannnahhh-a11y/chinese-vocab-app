@@ -3,6 +3,7 @@ package com.example.chineselock
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
@@ -33,6 +34,7 @@ import com.example.chineselock.feature.favorites.FavoritesScreen
 import com.example.chineselock.feature.home.HomeScreen
 import com.example.chineselock.feature.search.WordSearchScreen
 import com.example.chineselock.feature.vocab.VocabScreen
+import com.example.chineselock.ui.AdBanner
 import com.example.chineselock.ui.theme.ChineseLockTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -61,20 +63,23 @@ private fun AppRoot() {
     Scaffold(
         bottomBar = {
             if (showBottomBar) {
-                NavigationBar {
-                    Tab.entries.forEach { tab ->
-                        NavigationBarItem(
-                            selected = current == tab.route,
-                            onClick = {
-                                nav.navigate(tab.route) {
-                                    popUpTo(nav.graph.findStartDestination().id) { saveState = true }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            },
-                            icon = { Icon(tab.icon, tab.label) },
-                            label = { Text(tab.label) },
-                        )
+                Column {
+                    AdBanner()
+                    NavigationBar {
+                        Tab.entries.forEach { tab ->
+                            NavigationBarItem(
+                                selected = current == tab.route,
+                                onClick = {
+                                    nav.navigate(tab.route) {
+                                        popUpTo(nav.graph.findStartDestination().id) { saveState = true }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                },
+                                icon = { Icon(tab.icon, tab.label) },
+                                label = { Text(tab.label) },
+                            )
+                        }
                     }
                 }
             }

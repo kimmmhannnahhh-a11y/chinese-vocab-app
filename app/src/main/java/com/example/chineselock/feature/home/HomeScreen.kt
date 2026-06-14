@@ -1,7 +1,5 @@
 package com.example.chineselock.feature.home
 
-import android.speech.tts.TextToSpeech
-import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,27 +23,21 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.chineselock.core.db.Dialogue
 import com.example.chineselock.core.db.Vocab
+import com.example.chineselock.core.network.ExampleSentence
 import com.example.chineselock.ui.theme.AppColors
-import java.util.Locale
 
 @Composable
 fun HomeScreen(
@@ -55,26 +47,8 @@ fun HomeScreen(
     vm: HomeViewModel = hiltViewModel(),
 ) {
     val today by vm.todayWord.collectAsStateWithLifecycle()
-    val todayDialogue by vm.todayDialogue.collectAsStateWithLifecycle()
-    val context = LocalContext.current
-
-    // 중국어 발음 듣기용 TTS. 화면을 떠날 때 정리.
-    var tts by remember { mutableStateOf<TextToSpeech?>(null) }
-    DisposableEffect(Unit) {
-        val engine = TextToSpeech(context) { }
-        tts = engine
-        onDispose { engine.stop(); engine.shutdown() }
-    }
-    val speak: (String) -> Unit = speak@{ text ->
-        val e = tts ?: return@speak
-        val r = e.setLanguage(Locale.CHINESE)
-        if (r == TextToSpeech.LANG_MISSING_DATA || r == TextToSpeech.LANG_NOT_SUPPORTED) {
-            Toast.makeText(context, "기기에 중국어 음성(TTS)이 없어요. 설정 > 언어 > 음성에서 중국어를 설치해주세요.", Toast.LENGTH_LONG).show()
-            return@speak
-        }
-        e.setSpeechRate(0.9f)
-        e.speak(text, TextToSpeech.QUEUE_FLUSH, null, "today")
-    }
+    val todayTalk by vm.todayTalk.collectAsStateWithLifecycle()
+    val talkLoading by vm.talkLoading.collectAsStateWithLifecycle()
 
     Surface(Modifier.fillMaxSize()) {
         Column(Modifier.padding(horizontal = 16.dp)) {
@@ -84,7 +58,7 @@ fun HomeScreen(
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(top = 16.dp, bottom = 12.dp),
             )
-            TodayCard(today, todayDialogue, onSpeak = speak)
+            TodayCard(today, todayTalk, talkLoading, onSpeak = vm::speak)
             Spacer(Modifier.height(16.dp))
             MenuRow(Icons.Filled.PhotoCamera, "단어 추가", onAddVocab)
             Spacer(Modifier.height(12.dp))
@@ -96,7 +70,7 @@ fun HomeScreen(
 }
 
 @Composable
-private fun TodayCard(word: Vocab?, dialogue: Dialogue?, onSpeak: (String) -> Unit) {
+private fun TodayCard(word: Vocab?, talk: ExampleSentence?, talkLoading: Boolean, onSpeak: (String) -> Unit) {
     Box(
         Modifier
             .fillMaxWidth()
@@ -118,7 +92,7 @@ private fun TodayCard(word: Vocab?, dialogue: Dialogue?, onSpeak: (String) -> Un
                 fontSize = 13.sp,
             )
 
-            if (dialogue != null) {
+            if (word != null && (talk != null || talkLoading)) {
                 Spacer(Modifier.height(16.dp))
                 Box(Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = 0.18f)))
                 Spacer(Modifier.height(12.dp))
@@ -129,27 +103,33 @@ private fun TodayCard(word: Vocab?, dialogue: Dialogue?, onSpeak: (String) -> Un
                         fontSize = 11.sp,
                         modifier = Modifier.weight(1f),
                     )
-                    Box(
-                        Modifier.size(34.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.15f)),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        IconButton(onClick = { onSpeak(dialogue.chinese) }, modifier = Modifier.size(34.dp)) {
-                            Icon(
-                                Icons.Filled.VolumeUp,
-                                contentDescription = "발음 듣기",
-                                tint = Color.White,
-                                modifier = Modifier.size(19.dp),
-                            )
+                    if (talk != null) {
+                        Box(
+                            Modifier.size(34.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            IconButton(onClick = { onSpeak(talk.chinese) }, modifier = Modifier.size(34.dp)) {
+                                Icon(
+                                    Icons.Filled.VolumeUp,
+                                    contentDescription = "발음 듣기",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(19.dp),
+                                )
+                            }
                         }
                     }
                 }
                 Spacer(Modifier.height(6.dp))
-                Text(dialogue.chinese, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
-                dialogue.pinyin?.takeIf { it.isNotBlank() }?.let {
-                    Text(it, color = Color.White.copy(alpha = 0.8f), fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp))
-                }
-                dialogue.korean?.takeIf { it.isNotBlank() }?.let {
-                    Text(it, color = Color.White.copy(alpha = 0.92f), fontSize = 12.5.sp, modifier = Modifier.padding(top = 2.dp))
+                if (talk != null) {
+                    Text(talk.chinese, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+                    talk.pinyin.takeIf { it.isNotBlank() }?.let {
+                        Text(it, color = Color.White.copy(alpha = 0.8f), fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp))
+                    }
+                    talk.korean.takeIf { it.isNotBlank() }?.let {
+                        Text(it, color = Color.White.copy(alpha = 0.92f), fontSize = 12.5.sp, modifier = Modifier.padding(top = 2.dp))
+                    }
+                } else {
+                    Text("예문 만드는 중…", color = Color.White.copy(alpha = 0.75f), fontSize = 13.sp)
                 }
             }
         }

@@ -35,6 +35,14 @@ data class GeminiInlineData(
 data class GeminiGenerationConfig(
     @SerialName("responseMimeType") val responseMimeType: String = "application/json",
     val temperature: Double = 0.2,
+    // 2.5-flash의 '사고' 기능을 끈다(thinkingBudget=0). 응답 속도가 약 2배 빨라지고
+    // 교재 OCR 정확도는 동일(검증 완료) → 타임아웃 위험 감소.
+    @SerialName("thinkingConfig") val thinkingConfig: GeminiThinkingConfig = GeminiThinkingConfig(),
+)
+
+@Serializable
+data class GeminiThinkingConfig(
+    @SerialName("thinkingBudget") val thinkingBudget: Int = 0,
 )
 
 @Serializable
