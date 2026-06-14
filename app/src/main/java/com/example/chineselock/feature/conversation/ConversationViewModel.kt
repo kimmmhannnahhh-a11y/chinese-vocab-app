@@ -63,6 +63,15 @@ class ConversationViewModel @Inject constructor(
         }
     }
 
+    /** 현재 단원의 '번역(해석)만' 전체 지움(회화 문장은 보존). 번역 잘못 매칭됐을 때 재촬영용. */
+    fun clearTranslations() {
+        val id = _selectedUnitId.value ?: return
+        viewModelScope.launch {
+            repo.clearTranslations(id)
+            editMode.value = false
+        }
+    }
+
     /** 현재 단원 제목(권-과) 수정. */
     fun renameCurrentUnit(newTitle: String) {
         val id = _selectedUnitId.value ?: return

@@ -12,5 +12,10 @@ local.properties
 # Secrets — do NOT commit API keys
 secrets.properties
 
+# Release signing — do NOT commit (분실 시 앱 업데이트 불가하니 별도 백업!)
+keystore.properties
+*.jks
+*.keystore
+
 # build logs
 build_log*.txt

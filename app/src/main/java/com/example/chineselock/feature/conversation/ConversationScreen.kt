@@ -65,6 +65,7 @@ fun ConversationScreen(
     val editMode by vm.editMode.collectAsStateWithLifecycle()
     var showAdd by remember { mutableStateOf(false) }
     var showDeleteAll by remember { mutableStateOf(false) }
+    var showClearTr by remember { mutableStateOf(false) }
     var showRename by remember { mutableStateOf(false) }
     var editLine by remember { mutableStateOf<Dialogue?>(null) }
 
@@ -150,6 +151,20 @@ fun ConversationScreen(
                             }
                         }
                     }
+                    if (selectedId != null && turns.any { !it.korean.isNullOrBlank() }) {
+                        item {
+                            Row(
+                                Modifier.fillMaxWidth().padding(top = 10.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .border(1.dp, AppColors.Faint, RoundedCornerShape(12.dp))
+                                    .clickable { showClearTr = true }.padding(11.dp),
+                                horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Icon(Icons.Filled.DeleteOutline, null, tint = AppColors.Sub, modifier = Modifier.size(15.dp))
+                                Text("  번역(해석)만 지우기 · 회화는 유지", color = AppColors.Sub, fontSize = 13.sp)
+                            }
+                        }
+                    }
                     if (selectedId != null && turns.isNotEmpty()) {
                         item {
                             Row(
@@ -179,6 +194,20 @@ fun ConversationScreen(
         AddLineDialog(initial = d, onDismiss = { editLine = null }) { sp, zh, pin, ko ->
             vm.updateLine(d, sp, zh, pin, ko); editLine = null
         }
+    }
+
+    if (showClearTr) {
+        AlertDialog(
+            onDismissRequest = { showClearTr = false },
+            title = { Text("번역(해석)만 지우기") },
+            text = { Text("이 단원의 번역(해석)만 모두 지워요. 회화 문장은 그대로 남아요. (번역 페이지를 다시 촬영해 채울 수 있어요)") },
+            confirmButton = {
+                TextButton(onClick = { vm.clearTranslations(); showClearTr = false }) {
+                    Text("번역만 지우기", color = DangerRed)
+                }
+            },
+            dismissButton = { TextButton(onClick = { showClearTr = false }) { Text("취소") } },
+        )
     }
 
     if (showDeleteAll) {

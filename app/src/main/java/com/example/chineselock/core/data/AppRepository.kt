@@ -144,6 +144,9 @@ class AppRepository @Inject constructor(
     suspend fun addDialogue(d: Dialogue): Long = withContext(Dispatchers.IO) { dialogueDao.insert(d) }
     suspend fun addDialogueBatch(items: List<Dialogue>) = withContext(Dispatchers.IO) { dialogueDao.insertAll(items) }
 
+    /** 단원의 번역(해석)만 전체 비움 — 회화 문장은 보존. */
+    suspend fun clearTranslations(unitId: Long) = withContext(Dispatchers.IO) { dialogueDao.clearKoreanByUnit(unitId) }
+
     /** 해석 페이지에서 뽑은 한국어를 회화 문장에 순서대로 매칭해 채운다. 채운 개수 반환. */
     suspend fun applyTranslations(unitId: Long, koreanLines: List<String>): Int = withContext(Dispatchers.IO) {
         val dialogues = dialogueDao.getByUnit(unitId)

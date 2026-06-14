@@ -15,12 +15,18 @@ val secrets = Properties().apply {
     if (f.exists()) f.inputStream().use { load(it) }
 }
 
+// Load release signing config from keystore.properties (gitignored).
+val keystoreProps = Properties().apply {
+    val f = rootProject.file("keystore.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
+}
+
 android {
     namespace = "com.example.chineselock"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.chineselock"
+        applicationId = "com.han.teumsae"
         minSdk = 26
         targetSdk = 35
         versionCode = 1
@@ -41,10 +47,24 @@ android {
         )
     }
 
+    signingConfigs {
+        create("release") {
+            if (keystoreProps.containsKey("storeFile")) {
+                storeFile = rootProject.file(keystoreProps.getProperty("storeFile"))
+                storePassword = keystoreProps.getProperty("storePassword")
+                keyAlias = keystoreProps.getProperty("keyAlias")
+                keyPassword = keystoreProps.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            if (keystoreProps.containsKey("storeFile")) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
     compileOptions {

@@ -146,6 +146,12 @@ interface DialogueDao {
     /** 단원의 회화만 전체 삭제(단어는 보존). */
     @Query("DELETE FROM dialogue WHERE unitId = :unitId") fun deleteByUnit(unitId: Long)
 
+    /** 단원의 번역(해석)만 비움 — 회화 문장은 그대로 두고 korean만 NULL로. */
+    @Query("UPDATE dialogue SET korean = NULL WHERE unitId = :unitId") fun clearKoreanByUnit(unitId: Long)
+
+    /** 단원에 번역(해석)이 채워진 문장이 몇 개인지(번역 삭제 버튼 노출용). */
+    @Query("SELECT COUNT(*) FROM dialogue WHERE unitId = :unitId AND korean IS NOT NULL AND korean != ''") fun countTranslated(unitId: Long): Int
+
     @Query("SELECT COUNT(*) FROM dialogue WHERE unitId = :unitId") fun countByUnit(unitId: Long): Int
 
     /** 오늘의 회화: 오늘의 단어가 들어간 회화 문장 중 가장 짧은 것 1개(예문으로 적당). */
