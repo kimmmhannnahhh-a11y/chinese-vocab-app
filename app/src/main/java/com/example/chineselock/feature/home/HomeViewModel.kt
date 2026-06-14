@@ -3,6 +3,7 @@ package com.example.chineselock.feature.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.chineselock.core.data.AppRepository
+import com.example.chineselock.core.db.Dialogue
 import com.example.chineselock.core.db.Vocab
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,9 +20,15 @@ class HomeViewModel @Inject constructor(
     private val _todayWord = MutableStateFlow<Vocab?>(null)
     val todayWord: StateFlow<Vocab?> = _todayWord
 
+    private val _todayDialogue = MutableStateFlow<Dialogue?>(null)
+    val todayDialogue: StateFlow<Dialogue?> = _todayDialogue
+
     init {
         viewModelScope.launch {
-            _todayWord.value = repo.todayWord(LocalDate.now().toEpochDay())
+            val epochDay = LocalDate.now().toEpochDay()
+            val word = repo.todayWord(epochDay)
+            _todayWord.value = word
+            _todayDialogue.value = repo.todayDialogue(word, epochDay)
         }
     }
 }

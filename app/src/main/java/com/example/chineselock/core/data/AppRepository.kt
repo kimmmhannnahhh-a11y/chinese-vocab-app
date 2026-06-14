@@ -111,6 +111,13 @@ class AppRepository @Inject constructor(
         if (n == 0) null else vocabDao.getAt((epochDay % n).toInt())
     }
 
+    /** 오늘의 회화: 오늘의 단어가 들어간 회화 문장(없으면 날짜-결정형으로 아무 회화). */
+    suspend fun todayDialogue(word: Vocab?, epochDay: Long): Dialogue? = withContext(Dispatchers.IO) {
+        if (word != null) dialogueDao.findContaining(word.hanzi)?.let { return@withContext it }
+        val n = dialogueDao.count()
+        if (n == 0) null else dialogueDao.getAt((epochDay % n).toInt())
+    }
+
     // --- 회화 ---
     fun observeDialogue(unitId: Long): Flow<List<Dialogue>> = dialogueDao.observeByUnit(unitId)
     suspend fun deleteDialogue(id: Long) = withContext(Dispatchers.IO) { dialogueDao.deleteById(id) }

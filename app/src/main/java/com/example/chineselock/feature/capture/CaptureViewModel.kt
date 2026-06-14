@@ -8,6 +8,7 @@ import com.example.chineselock.core.network.DialogueItem
 import com.example.chineselock.core.network.OcrStructurer
 import com.example.chineselock.core.network.VocabItem
 import android.graphics.Bitmap
+import android.graphics.Matrix
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -24,7 +25,7 @@ enum class CaptureMode { VOCAB, DIALOGUE, TRANSLATION }
  * 교재 촬영 → ML Kit OCR → Gemini 구조화 → 검토/수정 → 저장.
  * VOCAB: 단어장 / DIALOGUE: 회화 / TRANSLATION: 회화 해석(순서로 매칭하여 채움).
  * 여러 장을 '이어서 추가 촬영'하면 결과가 아래로 누적된다.
- * 흐름: CAMERA → PROCESSING → REVIEW(편집·이어찍기) → 저장 / ERROR.
+ * 흐름: CAMERA → CROP(영역 선택·회전) → PROCESSING → REVIEW(편집·이어찍기) → 저장 / ERROR.
  */
 @HiltViewModel
 class CaptureViewModel @Inject constructor(
@@ -32,7 +33,7 @@ class CaptureViewModel @Inject constructor(
     private val repo: AppRepository,
 ) : ViewModel() {
 
-    enum class Phase { CAMERA, PROCESSING, REVIEW, ERROR }
+    enum class Phase { CAMERA, CROP, PROCESSING, REVIEW, ERROR }
 
     data class UiState(
         val phase: Phase = Phase.CAMERA,
@@ -43,6 +44,7 @@ class CaptureViewModel @Inject constructor(
         val translations: List<String> = emptyList(),   // TRANSLATION
         val sectionTitle: String? = null,
         val audioTrack: String? = null,
+        val captured: Bitmap? = null,                   // CROP 단계에서 보여줄 촬영 원본
         val error: String? = null,
     ) {
         val count: Int get() = when (mode) {
@@ -65,9 +67,25 @@ class CaptureViewModel @Inject constructor(
 
     fun setTitle(s: String) = _ui.update { it.copy(title = s) }
 
-    /** 촬영 결과 처리. 사진 → Gemini Vision 구조화 → 기존 결과에 누적. 실패 시 안내. */
+    /** 촬영 직후: 바로 처리하지 않고 CROP 단계로 — 사용자가 번역할 영역만 자르도록. */
+    fun onPhotoTaken(bitmap: Bitmap) {
+        _ui.update { it.copy(phase = Phase.CROP, captured = bitmap, error = null) }
+    }
+
+    /** 크롭 화면에서 사진을 시계방향 90° 회전(가로로 누운 페이지 바로 세우기). */
+    fun rotateCaptured() = _ui.update { st ->
+        val src = st.captured ?: return@update st
+        val m = Matrix().apply { postRotate(90f) }
+        val rotated = Bitmap.createBitmap(src, 0, 0, src.width, src.height, m, true)
+        st.copy(captured = rotated)
+    }
+
+    /** 크롭 취소: 사진 버리고 카메라로 복귀. */
+    fun cancelCrop() = _ui.update { it.copy(phase = Phase.CAMERA, captured = null, error = null) }
+
+    /** 잘라낸 영역(또는 회전된 전체)을 Gemini로 처리. 사진 → Vision 구조화 → 기존 결과에 누적. */
     fun onImageCaptured(bitmap: Bitmap) {
-        _ui.update { it.copy(phase = Phase.PROCESSING, error = null) }
+        _ui.update { it.copy(phase = Phase.PROCESSING, captured = null, error = null) }
         viewModelScope.launch {
             try {
                 val jpeg = toJpeg(bitmap)

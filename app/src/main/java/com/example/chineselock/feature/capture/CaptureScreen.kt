@@ -14,8 +14,12 @@ import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -56,11 +60,20 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlin.math.roundToInt
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -112,7 +125,7 @@ fun CaptureScreen(
                             CaptureMode.DIALOGUE -> "회화 페이지를 화면에 꽉 차게 맞추고 촬영하세요"
                             CaptureMode.TRANSLATION -> "해석(번역) 페이지를 화면에 꽉 차게 맞추고 촬영하세요"
                         },
-                        onCaptured = vm::onImageCaptured,
+                        onCaptured = vm::onPhotoTaken,
                         onBack = onBack,
                     )
                 } else {
@@ -121,6 +134,20 @@ fun CaptureScreen(
                         onBack = onBack,
                     )
                 }
+
+            CaptureViewModel.Phase.CROP -> {
+                val bmp = ui.captured
+                if (bmp == null) {
+                    LaunchedEffect(Unit) { vm.cancelCrop() }
+                } else {
+                    CropView(
+                        bitmap = bmp,
+                        onRotate = vm::rotateCaptured,
+                        onConfirm = vm::onImageCaptured,
+                        onCancel = vm::cancelCrop,
+                    )
+                }
+            }
 
             CaptureViewModel.Phase.PROCESSING -> ProcessingView()
 
@@ -264,6 +291,147 @@ private fun CameraView(guide: String, onCaptured: (Bitmap) -> Unit, onBack: () -
             }
         }
     }
+}
+
+/**
+ * 촬영 후 크롭/회전 화면. 사용자가 번역할 영역만 사각형으로 맞추고(모서리 드래그)
+ * 누운 사진은 회전한 뒤 그 부분만 Gemini로 보낸다 — 옆 섹션·여백 노이즈 제거로 인식률 향상.
+ */
+@Composable
+private fun CropView(
+    bitmap: Bitmap,
+    onRotate: () -> Unit,
+    onConfirm: (Bitmap) -> Unit,
+    onCancel: () -> Unit,
+) {
+    val density = LocalDensity.current
+    val handlePx = with(density) { 13.dp.toPx() }
+    val touchPx = with(density) { 28.dp.toPx() }
+    val minPx = with(density) { 56.dp.toPx() }
+    val borderPx = with(density) { 2.dp.toPx() }
+    val imageBitmap = remember(bitmap) { bitmap.asImageBitmap() }
+
+    // 크롭 영역을 '정규화 좌표(0~1, 이미지 기준)'로 보관 → 하단 버튼은 화면 크기 몰라도 됨.
+    // 회전하면 bitmap이 바뀌므로 자동으로 전체에 가깝게 리셋된다.
+    var norm by remember(bitmap) { mutableStateOf(Rect(0.05f, 0.05f, 0.95f, 0.95f)) }
+
+    Column(Modifier.fillMaxSize().background(Color.Black)) {
+        BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
+            val cw = constraints.maxWidth.toFloat()
+            val ch = constraints.maxHeight.toFloat()
+            val bw = bitmap.width.toFloat()
+            val bh = bitmap.height.toFloat()
+            val scale = minOf(cw / bw, ch / bh)
+            val dispW = bw * scale
+            val dispH = bh * scale
+            val imgLeft = (cw - dispW) / 2f
+            val imgTop = (ch - dispH) / 2f
+            // 정규화→화면 px 변환
+            fun toScreen(n: Rect) = Rect(
+                imgLeft + n.left * dispW, imgTop + n.top * dispH,
+                imgLeft + n.right * dispW, imgTop + n.bottom * dispH,
+            )
+            val minNx = (minPx / dispW).coerceIn(0f, 1f)
+            val minNy = (minPx / dispH).coerceIn(0f, 1f)
+            // 0=TL,1=TR,2=BL,3=BR,4=이동,-1=없음
+            var activeHandle by remember(bitmap) { mutableStateOf(-1) }
+
+            Image(
+                bitmap = imageBitmap,
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Fit,
+            )
+
+            Canvas(
+                Modifier.fillMaxSize().pointerInput(bitmap, dispW, dispH) {
+                    detectDragGestures(
+                        onDragStart = { pos ->
+                            val r = toScreen(norm)
+                            activeHandle = when {
+                                near(pos, r.left, r.top, touchPx) -> 0
+                                near(pos, r.right, r.top, touchPx) -> 1
+                                near(pos, r.left, r.bottom, touchPx) -> 2
+                                near(pos, r.right, r.bottom, touchPx) -> 3
+                                r.contains(pos) -> 4
+                                else -> -1
+                            }
+                        },
+                        onDragEnd = { activeHandle = -1 },
+                        onDragCancel = { activeHandle = -1 },
+                        onDrag = { change, drag ->
+                            change.consume()
+                            val dx = drag.x / dispW   // 화면 px → 정규화 delta
+                            val dy = drag.y / dispH
+                            val n = norm
+                            norm = when (activeHandle) {
+                                0 -> Rect((n.left + dx).coerceIn(0f, n.right - minNx), (n.top + dy).coerceIn(0f, n.bottom - minNy), n.right, n.bottom)
+                                1 -> Rect(n.left, (n.top + dy).coerceIn(0f, n.bottom - minNy), (n.right + dx).coerceIn(n.left + minNx, 1f), n.bottom)
+                                2 -> Rect((n.left + dx).coerceIn(0f, n.right - minNx), n.top, n.right, (n.bottom + dy).coerceIn(n.top + minNy, 1f))
+                                3 -> Rect(n.left, n.top, (n.right + dx).coerceIn(n.left + minNx, 1f), (n.bottom + dy).coerceIn(n.top + minNy, 1f))
+                                4 -> {
+                                    val nl = (n.left + dx).coerceIn(0f, 1f - n.width)
+                                    val nt = (n.top + dy).coerceIn(0f, 1f - n.height)
+                                    Rect(nl, nt, nl + n.width, nt + n.height)
+                                }
+                                else -> n
+                            }
+                        },
+                    )
+                }
+            ) {
+                val r = toScreen(norm)
+                val dim = Color(0xAA000000)
+                drawRect(dim, Offset(0f, 0f), Size(size.width, r.top))
+                drawRect(dim, Offset(0f, r.bottom), Size(size.width, size.height - r.bottom))
+                drawRect(dim, Offset(0f, r.top), Size(r.left, r.height))
+                drawRect(dim, Offset(r.right, r.top), Size(size.width - r.right, r.height))
+                drawRect(
+                    color = Color.White,
+                    topLeft = Offset(r.left, r.top),
+                    size = Size(r.width, r.height),
+                    style = Stroke(width = borderPx),
+                )
+                listOf(
+                    Offset(r.left, r.top), Offset(r.right, r.top),
+                    Offset(r.left, r.bottom), Offset(r.right, r.bottom),
+                ).forEach { drawCircle(AppColors.Purple, handlePx, it) }
+            }
+
+            IconButton(onClick = onCancel, modifier = Modifier.padding(8.dp).align(Alignment.TopStart)) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, "취소", tint = Color.White)
+            }
+        }
+
+        Column(
+            Modifier.fillMaxWidth().background(Color.Black).padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                "번역할 영역만 남기고 모서리를 끌어 맞추세요. 사진이 누웠으면 회전하세요.",
+                color = Color.White, fontSize = 12.sp, modifier = Modifier.padding(bottom = 12.dp),
+            )
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = onRotate, modifier = Modifier.weight(1f)) { Text("↻ 회전") }
+                Button(
+                    onClick = {
+                        val n = norm
+                        val bx = (n.left * bitmap.width).roundToInt().coerceIn(0, bitmap.width - 1)
+                        val by = (n.top * bitmap.height).roundToInt().coerceIn(0, bitmap.height - 1)
+                        val bwid = (n.width * bitmap.width).roundToInt().coerceIn(1, bitmap.width - bx)
+                        val bhei = (n.height * bitmap.height).roundToInt().coerceIn(1, bitmap.height - by)
+                        onConfirm(Bitmap.createBitmap(bitmap, bx, by, bwid, bhei))
+                    },
+                    modifier = Modifier.weight(1f),
+                ) { Text("이 영역만 인식") }
+            }
+        }
+    }
+}
+
+private fun near(p: Offset, x: Float, y: Float, r: Float): Boolean {
+    val dx = p.x - x; val dy = p.y - y
+    return dx * dx + dy * dy <= r * r
 }
 
 @Composable

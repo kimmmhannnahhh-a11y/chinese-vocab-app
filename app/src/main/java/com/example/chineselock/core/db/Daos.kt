@@ -135,6 +135,14 @@ interface DialogueDao {
     @Query("DELETE FROM dialogue WHERE unitId = :unitId") fun deleteByUnit(unitId: Long)
 
     @Query("SELECT COUNT(*) FROM dialogue WHERE unitId = :unitId") fun countByUnit(unitId: Long): Int
+
+    /** 오늘의 회화: 오늘의 단어가 들어간 회화 문장 중 가장 짧은 것 1개(예문으로 적당). */
+    @Query("SELECT * FROM dialogue WHERE chinese LIKE '%' || :frag || '%' ORDER BY LENGTH(chinese) ASC LIMIT 1")
+    fun findContaining(frag: String): Dialogue?
+
+    @Query("SELECT COUNT(*) FROM dialogue") fun count(): Int
+
+    @Query("SELECT * FROM dialogue LIMIT 1 OFFSET :index") fun getAt(index: Int): Dialogue?
 }
 
 @Dao
