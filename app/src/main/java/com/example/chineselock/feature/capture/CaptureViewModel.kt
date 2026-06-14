@@ -220,18 +220,16 @@ class CaptureViewModel @Inject constructor(
             onDone(0); return
         }
 
-        val parts = st.title.split("-", " ", ".").mapNotNull { it.trim().toIntOrNull() }
-        val book = parts.getOrElse(0) { 0 }
-        val lesson = parts.getOrElse(1) { 0 }
+        val title = st.title.trim()
         val isVocab = st.mode == CaptureMode.VOCAB
         viewModelScope.launch {
             // 제목 중복 방지: 같은 제목 단원에 같은 종류(단어/회화)가 이미 있으면 차단
-            if (repo.titleHasContent(book, lesson, isVocab)) {
+            if (repo.titleHasContent(title, isVocab)) {
                 val kind = if (isVocab) "단어" else "회화"
-                _ui.update { it.copy(error = "이미 '${st.title}' 단원에 ${kind}가 저장돼 있어요. 다른 제목을 쓰거나 단어장/회화에서 편집하세요.") }
+                _ui.update { it.copy(error = "이미 '$title' 단원에 ${kind}가 저장돼 있어요. 다른 제목을 쓰거나 단어장/회화에서 편집하세요.") }
                 onDone(0); return@launch
             }
-            val unitId = repo.getOrCreateUnit(book, lesson, now)
+            val unitId = repo.getOrCreateUnit(title, now)
             if (st.mode == CaptureMode.VOCAB) {
                 repo.addVocabBatch(unitId, st.items, startOrder = 0)
             } else {

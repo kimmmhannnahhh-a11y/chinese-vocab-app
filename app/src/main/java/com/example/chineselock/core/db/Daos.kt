@@ -32,6 +32,10 @@ interface StudyUnitDao {
     @Query("SELECT * FROM study_unit WHERE book = :book AND lesson = :lesson LIMIT 1")
     fun find(book: Int, lesson: Int): StudyUnit?
 
+    /** 제목(입력 그대로) 기준 조회 — 자유 형식 제목("3-1-2" 등) 지원용. */
+    @Query("SELECT * FROM study_unit WHERE title = :title LIMIT 1")
+    fun findByTitle(title: String): StudyUnit?
+
     /** 단원 통째로 삭제. FK CASCADE로 소속 단어·품사·회화도 함께 삭제됨. */
     @Query("DELETE FROM study_unit WHERE id = :id")
     fun deleteById(id: Long)

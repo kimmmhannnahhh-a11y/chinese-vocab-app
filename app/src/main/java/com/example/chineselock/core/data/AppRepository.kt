@@ -31,17 +31,28 @@ class AppRepository @Inject constructor(
     fun observeUnitsWithVocab(): Flow<List<StudyUnit>> = unitDao.observeWithVocab()
     fun observeUnitsWithDialogue(): Flow<List<StudyUnit>> = unitDao.observeWithDialogue()
 
-    suspend fun getOrCreateUnit(book: Int, lesson: Int, now: Long): Long = withContext(Dispatchers.IO) {
-        unitDao.find(book, lesson)?.id
-            ?: unitDao.insert(StudyUnit(book = book, lesson = lesson, title = "$book-$lesson", createdAt = now))
+    /** 입력한 제목 '그대로' 단원을 찾거나 새로 만든다(예: "3-1-2"도 그대로 저장). 정렬용 권/과만 파싱. */
+    suspend fun getOrCreateUnit(title: String, now: Long): Long = withContext(Dispatchers.IO) {
+        val t = title.trim()
+        unitDao.findByTitle(t)?.id ?: run {
+            val parts = t.split("-", " ", ".").mapNotNull { it.trim().toIntOrNull() }
+            unitDao.insert(
+                StudyUnit(
+                    book = parts.getOrElse(0) { 0 },
+                    lesson = parts.getOrElse(1) { 0 },
+                    title = t,
+                    createdAt = now,
+                )
+            )
+        }
     }
 
     /**
-     * 같은 제목(권-과) 단원에 같은 종류 콘텐츠가 이미 있는지 — 중복 저장 방지용.
+     * 같은 제목 단원에 같은 종류 콘텐츠가 이미 있는지 — 중복 저장 방지용.
      * isVocab=true면 단어, false면 회화 존재 여부. (단어/회화는 같은 단원 공유 가능)
      */
-    suspend fun titleHasContent(book: Int, lesson: Int, isVocab: Boolean): Boolean = withContext(Dispatchers.IO) {
-        val unit = unitDao.find(book, lesson) ?: return@withContext false
+    suspend fun titleHasContent(title: String, isVocab: Boolean): Boolean = withContext(Dispatchers.IO) {
+        val unit = unitDao.findByTitle(title.trim()) ?: return@withContext false
         if (isVocab) vocabDao.countByUnit(unit.id) > 0 else dialogueDao.countByUnit(unit.id) > 0
     }
 
@@ -69,11 +80,11 @@ class AppRepository @Inject constructor(
 
     /** 단원 제목(권/과) 수정. "3-1" 같은 입력을 권/과로 파싱해 갱신. */
     suspend fun renameUnit(unitId: Long, newTitle: String) = withContext(Dispatchers.IO) {
+        // 제목은 입력한 '그대로' 저장(예: "3-1-2"). 권/과는 정렬용으로만 파싱.
         val parts = newTitle.split("-", " ", ".").mapNotNull { it.trim().toIntOrNull() }
         val book = parts.getOrElse(0) { 0 }
         val lesson = parts.getOrElse(1) { 0 }
-        val title = if (parts.isNotEmpty()) "$book-$lesson" else newTitle.trim()
-        unitDao.rename(unitId, book, lesson, title)
+        unitDao.rename(unitId, book, lesson, newTitle.trim())
     }
 
     // --- 단어 ---

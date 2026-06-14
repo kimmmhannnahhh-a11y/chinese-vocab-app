@@ -30,15 +30,14 @@ class AddViewModel @Inject constructor(
     fun setTitle(s: String) { title.value = s }
     fun setPaste(s: String) { pasteText.value = s }
 
-    /** 등록: 제목(3-1)을 권/과로 파싱 → 단원 생성/조회 → 일괄 저장. onDone(개수). */
+    /** 등록: 제목(입력 그대로) → 단원 생성/조회 → 일괄 저장. 제목 필수·중복 차단. onDone(개수, 0이면 미저장). */
     fun register(now: Long, onDone: (Int) -> Unit) {
         val items = preview.value
-        if (items.isEmpty()) { onDone(0); return }
-        val parts = title.value.split("-", " ", ".").mapNotNull { it.trim().toIntOrNull() }
-        val book = parts.getOrElse(0) { 0 }
-        val lesson = parts.getOrElse(1) { 0 }
+        val t = title.value.trim()
+        if (items.isEmpty() || t.isBlank()) { onDone(0); return }
         viewModelScope.launch {
-            val unitId = repo.getOrCreateUnit(book, lesson, now)
+            if (repo.titleHasContent(t, isVocab = true)) { onDone(0); return@launch } // 같은 제목 단어 중복
+            val unitId = repo.getOrCreateUnit(t, now)
             repo.addVocabBatch(unitId, items, startOrder = 0)
             onDone(items.size)
         }
