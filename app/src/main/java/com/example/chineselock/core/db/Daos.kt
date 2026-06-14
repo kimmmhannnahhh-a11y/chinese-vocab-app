@@ -21,12 +21,20 @@ interface StudyUnitDao {
     @Query("SELECT * FROM study_unit ORDER BY book, lesson")
     fun observeAll(): Flow<List<StudyUnit>>
 
-    /** 단어가 1개 이상 있는 단원만(단어장 드롭다운용). */
-    @Query("SELECT u.* FROM study_unit u WHERE EXISTS (SELECT 1 FROM vocab v WHERE v.unitId = u.id) ORDER BY u.book, u.lesson")
+    /** 단어가 1개 이상 있는 단원만(단어장 드롭다운용). 최근 업로드순(가장 최근 추가한 단어 기준 최신 먼저). */
+    @Query(
+        """SELECT u.* FROM study_unit u
+           WHERE EXISTS (SELECT 1 FROM vocab v WHERE v.unitId = u.id)
+           ORDER BY (SELECT MAX(v.id) FROM vocab v WHERE v.unitId = u.id) DESC"""
+    )
     fun observeWithVocab(): Flow<List<StudyUnit>>
 
-    /** 회화가 1개 이상 있는 단원만(회화 드롭다운용). */
-    @Query("SELECT u.* FROM study_unit u WHERE EXISTS (SELECT 1 FROM dialogue d WHERE d.unitId = u.id) ORDER BY u.book, u.lesson")
+    /** 회화가 1개 이상 있는 단원만(회화 드롭다운용). 최근 업로드순(가장 최근 추가한 회화 기준 최신 먼저). */
+    @Query(
+        """SELECT u.* FROM study_unit u
+           WHERE EXISTS (SELECT 1 FROM dialogue d WHERE d.unitId = u.id)
+           ORDER BY (SELECT MAX(d.id) FROM dialogue d WHERE d.unitId = u.id) DESC"""
+    )
     fun observeWithDialogue(): Flow<List<StudyUnit>>
 
     @Query("SELECT * FROM study_unit WHERE book = :book AND lesson = :lesson LIMIT 1")
