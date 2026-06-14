@@ -21,6 +21,14 @@ interface StudyUnitDao {
     @Query("SELECT * FROM study_unit ORDER BY book, lesson")
     fun observeAll(): Flow<List<StudyUnit>>
 
+    /** 단어가 1개 이상 있는 단원만(단어장 드롭다운용). */
+    @Query("SELECT u.* FROM study_unit u WHERE EXISTS (SELECT 1 FROM vocab v WHERE v.unitId = u.id) ORDER BY u.book, u.lesson")
+    fun observeWithVocab(): Flow<List<StudyUnit>>
+
+    /** 회화가 1개 이상 있는 단원만(회화 드롭다운용). */
+    @Query("SELECT u.* FROM study_unit u WHERE EXISTS (SELECT 1 FROM dialogue d WHERE d.unitId = u.id) ORDER BY u.book, u.lesson")
+    fun observeWithDialogue(): Flow<List<StudyUnit>>
+
     @Query("SELECT * FROM study_unit WHERE book = :book AND lesson = :lesson LIMIT 1")
     fun find(book: Int, lesson: Int): StudyUnit?
 

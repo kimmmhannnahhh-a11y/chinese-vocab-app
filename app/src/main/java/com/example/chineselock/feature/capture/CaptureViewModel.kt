@@ -7,8 +7,8 @@ import com.example.chineselock.core.db.Dialogue
 import com.example.chineselock.core.network.DialogueItem
 import com.example.chineselock.core.network.OcrStructurer
 import com.example.chineselock.core.network.VocabItem
+import android.graphics.Bitmap
 import com.example.chineselock.core.ocr.OcrTextRecognizer
-import com.google.mlkit.vision.common.InputImage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -68,11 +68,12 @@ class CaptureViewModel @Inject constructor(
     fun setTitle(s: String) = _ui.update { it.copy(title = s) }
 
     /** 촬영 결과 처리. 인식 → 모드별 구조화 → 기존 결과에 누적. 실패 시 안내. */
-    fun onImageCaptured(image: InputImage) {
+    fun onImageCaptured(bitmap: Bitmap) {
+        val twoColumn = _ui.value.mode == CaptureMode.VOCAB
         _ui.update { it.copy(phase = Phase.PROCESSING, error = null) }
         viewModelScope.launch {
             try {
-                val raw = recognizer.recognize(image)
+                val raw = recognizer.recognize(bitmap, twoColumn = twoColumn)
                 if (raw.isBlank()) {
                     fail("글자를 인식하지 못했어요. 교재에 더 가까이, 밝은 곳에서 다시 찍어보세요.")
                     return@launch
@@ -124,6 +125,28 @@ class CaptureViewModel @Inject constructor(
 
     /** 이어서 추가 촬영: 기존 결과는 두고 카메라로 복귀(다음 촬영분이 아래로 누적됨). */
     fun captureMore() = _ui.update { it.copy(phase = Phase.CAMERA, error = null) }
+
+    // --- 수동 추가/수정 (검토 화면에서 직접 입력·교정) ---
+    fun addVocabItem(hanzi: String, pinyin: String, pos: List<String>, meaning: String) = _ui.update {
+        it.copy(items = it.items + VocabItem(hanzi = hanzi, pinyin = pinyin, pos = pos, meaning = meaning, category = null))
+    }
+    fun updateVocabItem(index: Int, hanzi: String, pinyin: String, pos: List<String>, meaning: String) = _ui.update { st ->
+        st.copy(items = st.items.mapIndexed { i, v ->
+            if (i == index) v.copy(hanzi = hanzi, pinyin = pinyin, pos = pos, meaning = meaning) else v
+        })
+    }
+    fun addDialogueLine(speaker: String?, chinese: String, pinyin: String?) = _ui.update {
+        it.copy(lines = it.lines + DialogueItem(speaker = speaker, chinese = chinese, pinyin = pinyin))
+    }
+    fun updateDialogueLine(index: Int, speaker: String?, chinese: String, pinyin: String?) = _ui.update { st ->
+        st.copy(lines = st.lines.mapIndexed { i, d ->
+            if (i == index) d.copy(speaker = speaker, chinese = chinese, pinyin = pinyin) else d
+        })
+    }
+    fun addTranslationLine(text: String) = _ui.update { it.copy(translations = it.translations + text) }
+    fun updateTranslationLine(index: Int, text: String) = _ui.update { st ->
+        st.copy(translations = st.translations.mapIndexed { i, t -> if (i == index) text else t })
+    }
 
     fun removeItem(index: Int) = _ui.update { st ->
         when (st.mode) {

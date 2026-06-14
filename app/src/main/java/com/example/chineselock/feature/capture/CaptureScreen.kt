@@ -2,6 +2,8 @@ package com.example.chineselock.feature.capture
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.Matrix
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -14,6 +16,7 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,8 +34,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -42,6 +47,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -60,10 +66,11 @@ import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.example.chineselock.core.network.DialogueItem
+import com.example.chineselock.core.network.VocabItem
 import com.example.chineselock.ui.PosBoxes
 import com.example.chineselock.ui.SpeakerTag
 import com.example.chineselock.ui.theme.AppColors
-import com.google.mlkit.vision.common.InputImage
 
 @Composable
 fun CaptureScreen(
@@ -81,6 +88,9 @@ fun CaptureScreen(
         CaptureMode.DIALOGUE -> "문장"
         CaptureMode.TRANSLATION -> "번역"
     }
+
+    // null=닫힘, -1=새로 추가, 0이상=해당 index 수정
+    var editIndex by remember { mutableStateOf<Int?>(null) }
 
     var hasPermission by remember {
         mutableStateOf(
@@ -121,6 +131,8 @@ fun CaptureScreen(
                 onRemove = vm::removeItem,
                 onRetake = vm::retake,
                 onCaptureMore = vm::captureMore,
+                onRowClick = { editIndex = it },
+                onAddManual = { editIndex = -1 },
                 onSave = {
                     vm.save(System.currentTimeMillis()) { n ->
                         Toast.makeText(context, "${n}개 ${unitLabel}을 등록했어요", Toast.LENGTH_SHORT).show()
@@ -136,10 +148,40 @@ fun CaptureScreen(
             )
         }
     }
+
+    val idx = editIndex
+    if (idx != null) {
+        when (ui.mode) {
+            CaptureMode.VOCAB -> VocabEditDialog(
+                initial = if (idx >= 0) ui.items.getOrNull(idx) else null,
+                onDismiss = { editIndex = null },
+                onConfirm = { h, p, pos, m ->
+                    if (idx >= 0) vm.updateVocabItem(idx, h, p, pos, m) else vm.addVocabItem(h, p, pos, m)
+                    editIndex = null
+                },
+            )
+            CaptureMode.DIALOGUE -> DialogueEditDialog(
+                initial = if (idx >= 0) ui.lines.getOrNull(idx) else null,
+                onDismiss = { editIndex = null },
+                onConfirm = { sp, zh, pin ->
+                    if (idx >= 0) vm.updateDialogueLine(idx, sp, zh, pin) else vm.addDialogueLine(sp, zh, pin)
+                    editIndex = null
+                },
+            )
+            CaptureMode.TRANSLATION -> TranslationEditDialog(
+                initial = if (idx >= 0) ui.translations.getOrNull(idx) else null,
+                onDismiss = { editIndex = null },
+                onConfirm = { t ->
+                    if (idx >= 0) vm.updateTranslationLine(idx, t) else vm.addTranslationLine(t)
+                    editIndex = null
+                },
+            )
+        }
+    }
 }
 
 @Composable
-private fun CameraView(guide: String, onCaptured: (InputImage) -> Unit, onBack: () -> Unit) {
+private fun CameraView(guide: String, onCaptured: (Bitmap) -> Unit, onBack: () -> Unit) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val imageCapture = remember { ImageCapture.Builder().build() }
@@ -195,10 +237,14 @@ private fun CameraView(guide: String, onCaptured: (InputImage) -> Unit, onBack: 
                             ContextCompat.getMainExecutor(context),
                             object : ImageCapture.OnImageCapturedCallback() {
                                 override fun onCaptureSuccess(image: ImageProxy) {
-                                    val bitmap = image.toBitmap()
+                                    val raw = image.toBitmap()
                                     val rotation = image.imageInfo.rotationDegrees
                                     image.close()
-                                    onCaptured(InputImage.fromBitmap(bitmap, rotation))
+                                    val upright = if (rotation == 0) raw else {
+                                        val m = Matrix().apply { postRotate(rotation.toFloat()) }
+                                        Bitmap.createBitmap(raw, 0, 0, raw.width, raw.height, m, true)
+                                    }
+                                    onCaptured(upright)
                                 }
 
                                 override fun onError(exc: ImageCaptureException) {
@@ -241,6 +287,8 @@ private fun ReviewView(
     onRemove: (Int) -> Unit,
     onRetake: () -> Unit,
     onCaptureMore: () -> Unit,
+    onRowClick: (Int) -> Unit,
+    onAddManual: () -> Unit,
     onSave: () -> Unit,
 ) {
     Column(
@@ -269,7 +317,7 @@ private fun ReviewView(
         }
 
         Text(
-            "인식된 $unitLabel ${ui.count}개 — 틀린 항목은 X로 빼고 등록하세요",
+            "인식된 $unitLabel ${ui.count}개 — 항목을 누르면 수정, X로 빼기",
             color = AppColors.Sub, fontSize = 11.sp, modifier = Modifier.padding(top = 14.dp, bottom = 4.dp),
         )
         Column(
@@ -277,7 +325,7 @@ private fun ReviewView(
         ) {
             when (ui.mode) {
                 CaptureMode.VOCAB -> ui.items.forEachIndexed { index, item ->
-                    Row(Modifier.fillMaxWidth().padding(vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.fillMaxWidth().clickable { onRowClick(index) }.padding(vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text(item.hanzi, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(end = 10.dp))
                         Column(Modifier.weight(1f)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -294,7 +342,7 @@ private fun ReviewView(
                 CaptureMode.DIALOGUE -> ui.lines.forEachIndexed { index, line ->
                     val speaker = line.speaker
                     val pinyin = line.pinyin
-                    Row(Modifier.fillMaxWidth().padding(vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.fillMaxWidth().clickable { onRowClick(index) }.padding(vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
                         if (!speaker.isNullOrBlank()) {
                             SpeakerTag(speaker)
                             Spacer(Modifier.width(8.dp))
@@ -311,7 +359,7 @@ private fun ReviewView(
                     }
                 }
                 CaptureMode.TRANSLATION -> ui.translations.forEachIndexed { index, ko ->
-                    Row(Modifier.fillMaxWidth().padding(vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.fillMaxWidth().clickable { onRowClick(index) }.padding(vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text("${index + 1}", color = AppColors.Muted, fontSize = 12.sp, modifier = Modifier.width(22.dp))
                         Text(ko, fontSize = 14.sp, modifier = Modifier.weight(1f))
                         IconButton(onClick = { onRemove(index) }) {
@@ -322,7 +370,12 @@ private fun ReviewView(
             }
         }
 
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(10.dp))
+        OutlinedButton(onClick = onAddManual, modifier = Modifier.fillMaxWidth()) {
+            Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp).padding(end = 6.dp))
+            Text("직접 추가")
+        }
+        Spacer(Modifier.height(8.dp))
         OutlinedButton(onClick = onCaptureMore, modifier = Modifier.fillMaxWidth()) {
             Icon(Icons.Filled.PhotoCamera, contentDescription = null, modifier = Modifier.size(18.dp).padding(end = 6.dp))
             Text("사진 더 찍기 (이어서 추가)")
@@ -365,4 +418,85 @@ private fun PermissionPrompt(onRequest: () -> Unit, onBack: () -> Unit) {
         Spacer(Modifier.height(8.dp))
         OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text("돌아가기") }
     }
+}
+
+@Composable
+private fun VocabEditDialog(
+    initial: VocabItem?,
+    onDismiss: () -> Unit,
+    onConfirm: (String, String, List<String>, String) -> Unit,
+) {
+    var hanzi by remember { mutableStateOf(initial?.hanzi ?: "") }
+    var pinyin by remember { mutableStateOf(initial?.pinyin ?: "") }
+    var meaning by remember { mutableStateOf(initial?.meaning ?: "") }
+    var pos by remember { mutableStateOf(initial?.pos?.joinToString("·") ?: "") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(if (initial == null) "단어 추가" else "단어 수정") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(hanzi, { hanzi = it }, label = { Text("한자") }, singleLine = true)
+                OutlinedTextField(pinyin, { pinyin = it }, label = { Text("병음") }, singleLine = true)
+                OutlinedTextField(meaning, { meaning = it }, label = { Text("뜻") }, singleLine = true)
+                OutlinedTextField(pos, { pos = it }, label = { Text("품사 (·로 구분, 선택)") }, singleLine = true)
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val posList = pos.split('·', ',', ' ').map { it.trim() }.filter { it.isNotEmpty() }
+                    onConfirm(hanzi.trim(), pinyin.trim(), posList, meaning.trim())
+                },
+                enabled = hanzi.isNotBlank() && meaning.isNotBlank(),
+            ) { Text("저장") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("취소") } },
+    )
+}
+
+@Composable
+private fun DialogueEditDialog(
+    initial: DialogueItem?,
+    onDismiss: () -> Unit,
+    onConfirm: (String?, String, String?) -> Unit,
+) {
+    var speaker by remember { mutableStateOf(initial?.speaker ?: "") }
+    var chinese by remember { mutableStateOf(initial?.chinese ?: "") }
+    var pinyin by remember { mutableStateOf(initial?.pinyin ?: "") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(if (initial == null) "문장 추가" else "문장 수정") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(speaker, { speaker = it }, label = { Text("화자 (A/B, 본문이면 비움)") }, singleLine = true)
+                OutlinedTextField(chinese, { chinese = it }, label = { Text("중국어") })
+                OutlinedTextField(pinyin, { pinyin = it }, label = { Text("병음") })
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onConfirm(speaker.trim().ifBlank { null }, chinese.trim(), pinyin.trim().ifBlank { null }) },
+                enabled = chinese.isNotBlank(),
+            ) { Text("저장") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("취소") } },
+    )
+}
+
+@Composable
+private fun TranslationEditDialog(
+    initial: String?,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit,
+) {
+    var text by remember { mutableStateOf(initial ?: "") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(if (initial == null) "번역 추가" else "번역 수정") },
+        text = { OutlinedTextField(text, { text = it }, label = { Text("한국어 해석") }) },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(text.trim()) }, enabled = text.isNotBlank()) { Text("저장") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("취소") } },
+    )
 }

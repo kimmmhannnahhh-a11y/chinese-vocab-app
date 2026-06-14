@@ -66,6 +66,7 @@ fun ConversationScreen(
     var showAdd by remember { mutableStateOf(false) }
     var showDeleteAll by remember { mutableStateOf(false) }
     var showRename by remember { mutableStateOf(false) }
+    var editLine by remember { mutableStateOf<Dialogue?>(null) }
 
     val title = units.firstOrNull { it.id == selectedId }?.title ?: "—"
     val sectionTitle = turns.firstOrNull()?.sectionTitle
@@ -119,7 +120,7 @@ fun ConversationScreen(
 
             LazyColumn(Modifier.fillMaxSize()) {
                 items(turns, key = { it.id }) { t ->
-                    TurnRow(t, showTranslation, editMode, onSpeak = { vm.speak(t.chinese) }, onDelete = { vm.delete(t) })
+                    TurnRow(t, showTranslation, editMode, onEdit = { editLine = t }, onSpeak = { vm.speak(t.chinese) }, onDelete = { vm.delete(t) })
                     Box(Modifier.fillMaxWidth().background(AppColors.Line).height(1.dp))
                 }
                 if (editMode) {
@@ -174,6 +175,12 @@ fun ConversationScreen(
         }
     }
 
+    editLine?.let { d ->
+        AddLineDialog(initial = d, onDismiss = { editLine = null }) { sp, zh, pin, ko ->
+            vm.updateLine(d, sp, zh, pin, ko); editLine = null
+        }
+    }
+
     if (showDeleteAll) {
         AlertDialog(
             onDismissRequest = { showDeleteAll = false },
@@ -213,8 +220,10 @@ fun ConversationScreen(
 private val DangerRed = Color(0xFFD14D4D)
 
 @Composable
-private fun TurnRow(t: Dialogue, showTranslation: Boolean, editMode: Boolean, onSpeak: () -> Unit, onDelete: () -> Unit) {
-    Row(Modifier.fillMaxWidth().padding(vertical = 9.dp), verticalAlignment = Alignment.Top) {
+private fun TurnRow(t: Dialogue, showTranslation: Boolean, editMode: Boolean, onEdit: () -> Unit, onSpeak: () -> Unit, onDelete: () -> Unit) {
+    val rowMod = if (editMode) Modifier.fillMaxWidth().clickable { onEdit() }.padding(vertical = 9.dp)
+                 else Modifier.fillMaxWidth().padding(vertical = 9.dp)
+    Row(rowMod, verticalAlignment = Alignment.Top) {
         if (t.speaker != null) {
             SpeakerTag(t.speaker)
             Spacer(Modifier.width(8.dp))
@@ -284,27 +293,31 @@ private fun UnitDropdown(title: String, options: List<Pair<Long, String>>, onSel
 }
 
 @Composable
-private fun AddLineDialog(onDismiss: () -> Unit, onAdd: (String?, String, String?, String?) -> Unit) {
-    var speaker by remember { mutableStateOf("") }
-    var chinese by remember { mutableStateOf("") }
-    var pinyin by remember { mutableStateOf("") }
-    var korean by remember { mutableStateOf("") }
+private fun AddLineDialog(
+    initial: Dialogue? = null,
+    onDismiss: () -> Unit,
+    onAdd: (String?, String, String?, String?) -> Unit,
+) {
+    var speaker by remember { mutableStateOf(initial?.speaker ?: "") }
+    var chinese by remember { mutableStateOf(initial?.chinese ?: "") }
+    var pinyin by remember { mutableStateOf(initial?.pinyin ?: "") }
+    var korean by remember { mutableStateOf(initial?.korean ?: "") }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("문장 추가") },
+        title = { Text(if (initial == null) "문장 추가" else "문장 수정") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(speaker, { speaker = it }, label = { Text("화자 (A/B, 본문이면 비움)") }, singleLine = true)
-                OutlinedTextField(chinese, { chinese = it }, label = { Text("중국어") }, singleLine = true)
-                OutlinedTextField(pinyin, { pinyin = it }, label = { Text("병음") }, singleLine = true)
-                OutlinedTextField(korean, { korean = it }, label = { Text("해석") }, singleLine = true)
+                OutlinedTextField(chinese, { chinese = it }, label = { Text("중국어") })
+                OutlinedTextField(pinyin, { pinyin = it }, label = { Text("병음") })
+                OutlinedTextField(korean, { korean = it }, label = { Text("해석") })
             }
         },
         confirmButton = {
             TextButton(
                 onClick = { onAdd(speaker.trim().ifBlank { null }, chinese.trim(), pinyin.trim().ifBlank { null }, korean.trim().ifBlank { null }) },
                 enabled = chinese.isNotBlank(),
-            ) { Text("추가") }
+            ) { Text(if (initial == null) "추가" else "저장") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("취소") } },
     )

@@ -27,7 +27,7 @@ class VocabViewModel @Inject constructor(
 ) : ViewModel() {
 
     val units: StateFlow<List<StudyUnit>> =
-        repo.observeUnits().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+        repo.observeUnitsWithVocab().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _selectedUnitId = MutableStateFlow<Long?>(null)
     val selectedUnitId: StateFlow<Long?> = _selectedUnitId
@@ -63,6 +63,13 @@ class VocabViewModel @Inject constructor(
 
     fun toggleFavorite(v: Vocab) = viewModelScope.launch { repo.setFavorite(v.id, !v.isFavorite) }
     fun delete(v: Vocab) = viewModelScope.launch { repo.deleteVocab(v.id) }
+
+    /** 저장된 단어 수정(뜻/병음/한자/품사). */
+    fun updateVocab(v: Vocab, hanzi: String, pinyin: String, pos: List<String>, meaning: String) = viewModelScope.launch {
+        repo.updateVocab(
+            v.copy(hanzi = hanzi, pinyin = pinyin, partOfSpeech = pos.joinToString("·").ifEmpty { null }, meaning = meaning)
+        )
+    }
 
     /** 현재 단원의 '단어만' 전체 삭제(회화는 보존). 단어·회화 모두 비면 단원도 삭제됨. */
     fun deleteCurrentUnitVocab() {

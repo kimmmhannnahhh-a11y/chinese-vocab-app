@@ -28,6 +28,8 @@ class AppRepository @Inject constructor(
 ) {
     // --- 단원 ---
     fun observeUnits(): Flow<List<StudyUnit>> = unitDao.observeAll()
+    fun observeUnitsWithVocab(): Flow<List<StudyUnit>> = unitDao.observeWithVocab()
+    fun observeUnitsWithDialogue(): Flow<List<StudyUnit>> = unitDao.observeWithDialogue()
 
     suspend fun getOrCreateUnit(book: Int, lesson: Int, now: Long): Long = withContext(Dispatchers.IO) {
         unitDao.find(book, lesson)?.id
@@ -77,6 +79,8 @@ class AppRepository @Inject constructor(
     }
 
     suspend fun deleteVocab(id: Long) = withContext(Dispatchers.IO) { vocabDao.deleteById(id) }
+    suspend fun updateVocab(v: Vocab) = withContext(Dispatchers.IO) { vocabDao.update(v) }
+    suspend fun updateDialogue(d: Dialogue) = withContext(Dispatchers.IO) { dialogueDao.update(d) }
 
     /** VocabItem(OCR/직접입력 결과)을 단어 + 품사 연결행으로 저장. */
     suspend fun addVocab(unitId: Long, item: VocabItem, order: Int): Long = withContext(Dispatchers.IO) {

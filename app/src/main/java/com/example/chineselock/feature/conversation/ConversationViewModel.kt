@@ -25,7 +25,7 @@ class ConversationViewModel @Inject constructor(
 ) : ViewModel() {
 
     val units: StateFlow<List<StudyUnit>> =
-        repo.observeUnits().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+        repo.observeUnitsWithDialogue().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _selectedUnitId = MutableStateFlow<Long?>(null)
     val selectedUnitId: StateFlow<Long?> = _selectedUnitId
@@ -74,6 +74,11 @@ class ConversationViewModel @Inject constructor(
     fun playAll() = tts.speakSequence(turns.value.map { it.chinese })
 
     fun delete(d: Dialogue) = viewModelScope.launch { repo.deleteDialogue(d.id) }
+
+    /** 저장된 회화 문장 수정. */
+    fun updateLine(d: Dialogue, speaker: String?, chinese: String, pinyin: String?, korean: String?) = viewModelScope.launch {
+        repo.updateDialogue(d.copy(speaker = speaker, chinese = chinese, pinyin = pinyin, korean = korean))
+    }
 
     fun addLine(speaker: String?, chinese: String, pinyin: String?, korean: String?) {
         val unitId = _selectedUnitId.value ?: return
