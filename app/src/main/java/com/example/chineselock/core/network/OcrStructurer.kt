@@ -2,7 +2,9 @@ package com.example.chineselock.core.network
 
 import android.util.Base64
 import com.example.chineselock.BuildConfig
+import kotlinx.coroutines.delay
 import kotlinx.serialization.json.Json
+import retrofit2.HttpException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -18,13 +20,30 @@ class OcrStructurer @Inject constructor(
 ) {
     private val json = Json { ignoreUnknownKeys = true }
 
+    /**
+     * 일시적 429(분당 한도 초과)는 잠깐 기다렸다 자동 재시도한다.
+     * 하루 한도 소진처럼 계속 429면 마지막에 그대로 던져 호출부가 안내 메시지를 표시.
+     */
+    private suspend fun generate(request: GeminiRequest): GeminiResponse {
+        var lastError: HttpException? = null
+        repeat(3) { attempt ->
+            try {
+                return gemini.generate(model = MODEL, apiKey = BuildConfig.GEMINI_API_KEY, request = request)
+            } catch (e: HttpException) {
+                if (e.code() == 429 && attempt < 2) {
+                    lastError = e
+                    delay(3000L * (attempt + 1)) // 3초, 6초 후 재시도
+                } else throw e
+            }
+        }
+        throw lastError!!
+    }
+
     /** system 지시 + (사용자 텍스트 + 이미지) 1턴 호출 → 모델이 돌려준 JSON 문자열. */
     private suspend fun completeWithImage(systemPrompt: String, jpeg: ByteArray): String {
         val b64 = Base64.encodeToString(jpeg, Base64.NO_WRAP)
-        val resp = gemini.generate(
-            model = MODEL,
-            apiKey = BuildConfig.GEMINI_API_KEY,
-            request = GeminiRequest(
+        val resp = generate(
+            GeminiRequest(
                 systemInstruction = GeminiContent(parts = listOf(GeminiPart(text = systemPrompt))),
                 contents = listOf(
                     GeminiContent(
@@ -34,7 +53,7 @@ class OcrStructurer @Inject constructor(
                         )
                     )
                 ),
-            ),
+            )
         )
         return resp.candidates.firstOrNull()?.content?.parts?.firstOrNull { it.text != null }?.text
             ?: error("Gemini 응답이 비어 있어요. 키/네트워크를 확인해주세요.")
@@ -57,23 +76,20 @@ class OcrStructurer @Inject constructor(
 
     /** system 지시 + 사용자 텍스트 1턴 호출(이미지 없음) → 모델 JSON 문자열. */
     private suspend fun completeText(systemPrompt: String, userText: String): String {
-        val resp = gemini.generate(
-            model = MODEL,
-            apiKey = BuildConfig.GEMINI_API_KEY,
-            request = GeminiRequest(
+        val resp = generate(
+            GeminiRequest(
                 systemInstruction = GeminiContent(parts = listOf(GeminiPart(text = systemPrompt))),
                 contents = listOf(GeminiContent(parts = listOf(GeminiPart(text = userText)))),
-            ),
+            )
         )
         return resp.candidates.firstOrNull()?.content?.parts?.firstOrNull { it.text != null }?.text
             ?: error("Gemini 응답이 비어 있어요.")
     }
 
     private companion object {
-        // 2.5-flash-lite는 회전/다자 단어/턴 병합에서 오인식이 잦았다(待→等, 烤鸭→烤 등).
-        // 2.5-flash로 상향: 정확도가 크게 좋고 무료 티어 쿼터도 별도 버킷이라 사용 가능.
-        // (2.0-flash는 일부 프로젝트에서 무료 할당량 0이라 사용 불가.)
-        const val MODEL = "gemini-2.5-flash"
+        // gemini-2.5-flash는 정확도는 좋지만 무료 티어가 '하루 20회'뿐이라 앱으로 사용 불가(429).
+        // flash-lite는 무료 한도가 훨씬 높아 실사용 가능 → lite 사용 + 프롬프트(병합·다자단어)로 정확도 보완.
+        const val MODEL = "gemini-2.5-flash-lite"
 
         const val VOCAB_SYSTEM_PROMPT = """
 너는 중국어 교재 단어 페이지 '사진'을 직접 읽어 표로 구조화하는 도우미다. 출력은 반드시 유효한 JSON 하나뿐.
