@@ -172,8 +172,10 @@ fun CaptureScreen(
                 onAddManual = { editIndex = -1 },
                 onSave = {
                     vm.save(System.currentTimeMillis()) { n ->
-                        Toast.makeText(context, "${n}개 ${unitLabel}을 등록했어요", Toast.LENGTH_SHORT).show()
-                        if (n > 0) onBack()
+                        if (n > 0) {
+                            Toast.makeText(context, "${n}개 ${unitLabel}을 등록했어요", Toast.LENGTH_SHORT).show()
+                            onBack()
+                        }
                     }
                 },
             )
@@ -483,7 +485,7 @@ private fun ReviewView(
                 color = AppColors.Sub, fontSize = 11.sp, modifier = Modifier.padding(top = 6.dp),
             )
         } else {
-            Text("제목 (단원)", color = AppColors.Sub, fontSize = 11.sp, modifier = Modifier.padding(top = 6.dp, bottom = 4.dp))
+            Text("제목 (단원) · 필수", color = AppColors.Sub, fontSize = 11.sp, modifier = Modifier.padding(top = 6.dp, bottom = 4.dp))
             OutlinedTextField(
                 value = ui.title, onValueChange = onTitle, singleLine = true,
                 placeholder = { Text("예: 3-1", color = AppColors.Muted) }, modifier = Modifier.fillMaxWidth(),
@@ -559,8 +561,17 @@ private fun ReviewView(
             Text("사진 더 찍기 (이어서 추가)")
         }
         Spacer(Modifier.height(8.dp))
-        Button(onClick = onSave, enabled = ui.count > 0, modifier = Modifier.fillMaxWidth()) {
+        val titleRequired = ui.mode != CaptureMode.TRANSLATION
+        val canSave = ui.count > 0 && (!titleRequired || ui.title.isNotBlank())
+        Button(onClick = onSave, enabled = canSave, modifier = Modifier.fillMaxWidth()) {
             Text("${ui.count}개 $unitLabel 등록")
+        }
+        if (titleRequired && ui.title.isBlank() && ui.count > 0) {
+            Text(
+                "제목(단원)을 입력해야 저장할 수 있어요",
+                color = Color(0xFFC24062), fontSize = 11.sp,
+                modifier = Modifier.padding(top = 6.dp),
+            )
         }
         Spacer(Modifier.height(8.dp))
         OutlinedButton(onClick = onRetake, modifier = Modifier.fillMaxWidth()) { Text("처음부터 다시") }

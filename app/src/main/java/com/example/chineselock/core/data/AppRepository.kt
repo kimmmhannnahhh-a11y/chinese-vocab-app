@@ -36,6 +36,15 @@ class AppRepository @Inject constructor(
             ?: unitDao.insert(StudyUnit(book = book, lesson = lesson, title = "$book-$lesson", createdAt = now))
     }
 
+    /**
+     * 같은 제목(권-과) 단원에 같은 종류 콘텐츠가 이미 있는지 — 중복 저장 방지용.
+     * isVocab=true면 단어, false면 회화 존재 여부. (단어/회화는 같은 단원 공유 가능)
+     */
+    suspend fun titleHasContent(book: Int, lesson: Int, isVocab: Boolean): Boolean = withContext(Dispatchers.IO) {
+        val unit = unitDao.find(book, lesson) ?: return@withContext false
+        if (isVocab) vocabDao.countByUnit(unit.id) > 0 else dialogueDao.countByUnit(unit.id) > 0
+    }
+
     /** 단원 통째로 삭제(단어·품사·회화 CASCADE). */
     suspend fun deleteUnit(unitId: Long) = withContext(Dispatchers.IO) { unitDao.deleteById(unitId) }
 
