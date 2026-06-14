@@ -2,7 +2,10 @@ package com.example.chineselock.feature.capture
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import android.app.Activity
+import com.example.chineselock.core.ads.RewardedAdManager
 import com.example.chineselock.core.data.AppRepository
+import com.example.chineselock.core.data.OcrGateStore
 import com.example.chineselock.core.db.Dialogue
 import com.example.chineselock.core.network.DialogueItem
 import com.example.chineselock.core.network.OcrStructurer
@@ -22,6 +25,12 @@ import javax.inject.Inject
 enum class CaptureMode { VOCAB, DIALOGUE, TRANSLATION }
 
 /**
+ * "광고 보고 오늘 무료 인식" 게이트 사용 여부.
+ * 개발/테스트 중엔 false(게이트 없이 바로 촬영). 출시 시 true로 바꾸고 실제 광고ID로 교체.
+ */
+private const val AD_GATE_ENABLED = false
+
+/**
  * 교재 촬영 → ML Kit OCR → Gemini 구조화 → 검토/수정 → 저장.
  * VOCAB: 단어장 / DIALOGUE: 회화 / TRANSLATION: 회화 해석(순서로 매칭하여 채움).
  * 여러 장을 '이어서 추가 촬영'하면 결과가 아래로 누적된다.
@@ -31,6 +40,8 @@ enum class CaptureMode { VOCAB, DIALOGUE, TRANSLATION }
 class CaptureViewModel @Inject constructor(
     private val structurer: OcrStructurer,
     private val repo: AppRepository,
+    private val gateStore: OcrGateStore,
+    private val adManager: RewardedAdManager,
 ) : ViewModel() {
 
     enum class Phase { CAMERA, CROP, PROCESSING, REVIEW, ERROR }
@@ -60,9 +71,27 @@ class CaptureViewModel @Inject constructor(
     private val _ui = MutableStateFlow(UiState())
     val ui: StateFlow<UiState> = _ui.asStateFlow()
 
+    /** "광고 보고 오늘 무료 인식" 잠금 해제 상태(그날 1회 광고 보면 true). */
+    val gateUnlocked = MutableStateFlow(false)
+
+    private fun today() = java.time.LocalDate.now().toEpochDay()
+
     fun configure(mode: CaptureMode, unitId: Long? = null) {
         targetUnitId = unitId
         _ui.update { if (it.mode == mode) it else it.copy(mode = mode) }
+        gateUnlocked.value = !AD_GATE_ENABLED || gateStore.isUnlocked(today())
+        if (!gateUnlocked.value) adManager.preload() // 버튼 누르면 바로 뜨도록 미리 로드
+    }
+
+    /** 그날치 인식 잠금 해제(광고 보상 획득 시). */
+    private fun unlockToday() {
+        gateStore.unlock(today())
+        gateUnlocked.value = true
+    }
+
+    /** 리워드 광고 표시 → 보상 받으면 그날 인식 무제한. 광고 없으면 막지 않고 통과(fail-open). */
+    fun watchAdToUnlock(activity: Activity) {
+        adManager.show(activity, onReward = { unlockToday() }, onUnavailable = { unlockToday() })
     }
 
     fun setTitle(s: String) = _ui.update { it.copy(title = s) }

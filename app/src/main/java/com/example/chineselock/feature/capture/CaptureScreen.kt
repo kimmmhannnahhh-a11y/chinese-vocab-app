@@ -1,6 +1,9 @@
 package com.example.chineselock.feature.capture
 
 import android.Manifest
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Matrix
@@ -93,6 +96,7 @@ fun CaptureScreen(
     vm: CaptureViewModel = hiltViewModel(),
 ) {
     val ui by vm.ui.collectAsStateWithLifecycle()
+    val gateUnlocked by vm.gateUnlocked.collectAsStateWithLifecycle()
     val context = LocalContext.current
     LaunchedEffect(mode, unitId) { vm.configure(mode, unitId) }
 
@@ -118,7 +122,13 @@ fun CaptureScreen(
     Surface(Modifier.fillMaxSize()) {
         when (ui.phase) {
             CaptureViewModel.Phase.CAMERA ->
-                if (hasPermission) {
+                if (!gateUnlocked) {
+                    AdGateView(
+                        unitLabel = unitLabel,
+                        onWatchAd = { context.findActivity()?.let { vm.watchAdToUnlock(it) } },
+                        onBack = onBack,
+                    )
+                } else if (hasPermission) {
                     CameraView(
                         guide = when (ui.mode) {
                             CaptureMode.VOCAB -> "단어 페이지를 화면에 꽉 차게 맞추고 촬영하세요"
@@ -571,6 +581,36 @@ private fun ErrorView(message: String, onRetake: () -> Unit, onBack: () -> Unit)
         Spacer(Modifier.height(8.dp))
         OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text("돌아가기") }
     }
+}
+
+/** "광고 보고 오늘 무료로 인식하기" 게이트 화면(출시 시 활성화). */
+@Composable
+private fun AdGateView(unitLabel: String, onWatchAd: () -> Unit, onBack: () -> Unit) {
+    Column(
+        Modifier.fillMaxSize().padding(32.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text("오늘 ${unitLabel} 인식 무료로 열기", color = AppColors.Ink, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(10.dp))
+        Text(
+            "광고를 한 번 보면 오늘 하루 사진 인식을 무제한으로 쓸 수 있어요.",
+            color = AppColors.Sub, fontSize = 13.sp,
+        )
+        Spacer(Modifier.height(24.dp))
+        Button(onClick = onWatchAd, modifier = Modifier.fillMaxWidth()) { Text("광고 보고 오늘 무료로 인식하기") }
+        Spacer(Modifier.height(8.dp))
+        OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text("돌아가기") }
+    }
+}
+
+private fun Context.findActivity(): Activity? {
+    var ctx: Context = this
+    while (ctx is ContextWrapper) {
+        if (ctx is Activity) return ctx
+        ctx = ctx.baseContext
+    }
+    return null
 }
 
 @Composable
