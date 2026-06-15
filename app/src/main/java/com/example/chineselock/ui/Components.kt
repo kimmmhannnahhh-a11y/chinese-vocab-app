@@ -87,7 +87,8 @@ fun VocabListRow(
     onToggleFav: () -> Unit,
 ) {
     val showHanzi = mode != StudyMode.MEANING_ONLY || revealed
-    val showRest = mode == StudyMode.ALL || revealed
+    val showMeaning = mode != StudyMode.HANZI_ONLY || revealed
+    val showPinyin = mode == StudyMode.ALL || revealed
     Row(
         Modifier
             .fillMaxWidth()
@@ -97,18 +98,19 @@ fun VocabListRow(
     ) {
         Box(Modifier.width(52.dp)) {
             if (showHanzi) Text(hanzi, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+            else Text("탭", color = AppColors.Muted, fontSize = 11.sp)
         }
         Spacer(Modifier.width(7.dp))
         Column(Modifier.weight(1f)) {
-            if (showRest) {
+            if (showMeaning) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     PosBoxes(partOfSpeech)
                     Text(meaning, fontSize = 13.sp)
                 }
-                Text(pinyin, color = AppColors.Sub, fontSize = 11.sp)
             } else {
                 Text("탭하면 공개", color = AppColors.Muted, fontSize = 11.sp)
             }
+            if (showPinyin) Text(pinyin, color = AppColors.Sub, fontSize = 11.sp)
         }
         SpeakButton(onSpeak)
         StarButton(isFavorite, onToggleFav)
