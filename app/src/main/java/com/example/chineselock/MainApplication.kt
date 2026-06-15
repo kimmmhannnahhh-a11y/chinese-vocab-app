@@ -1,23 +1,14 @@
 package com.example.chineselock
 
 import android.app.Application
-import com.example.chineselock.core.data.DbSeeder
+import com.google.android.gms.ads.MobileAds
 import dagger.hilt.android.HiltAndroidApp
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 @HiltAndroidApp
 class MainApplication : Application() {
-
-    @Inject lateinit var seeder: DbSeeder
-
-    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-
     override fun onCreate() {
         super.onCreate()
-        appScope.launch { seeder.seedIfEmpty(System.currentTimeMillis()) }
+        // AdMob 초기화(배너 광고용). 백그라운드에서 1회.
+        MobileAds.initialize(this) {}
     }
 }

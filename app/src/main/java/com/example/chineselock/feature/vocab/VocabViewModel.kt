@@ -27,7 +27,7 @@ class VocabViewModel @Inject constructor(
 ) : ViewModel() {
 
     val units: StateFlow<List<StudyUnit>> =
-        repo.observeUnits().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+        repo.observeUnitsWithVocab().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _selectedUnitId = MutableStateFlow<Long?>(null)
     val selectedUnitId: StateFlow<Long?> = _selectedUnitId
@@ -43,7 +43,11 @@ class VocabViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             units.collect { list ->
-                if (_selectedUnitId.value == null && list.isNotEmpty()) {
+                val cur = _selectedUnitId.value
+                if (list.isEmpty()) {
+                    _selectedUnitId.value = null
+                } else if (cur == null || list.none { it.id == cur }) {
+                    // 선택한 단원이 사라졌거나 미선택이면 첫 단원으로 자동 복구
                     _selectedUnitId.value = list.first().id
                 }
             }
@@ -59,6 +63,29 @@ class VocabViewModel @Inject constructor(
 
     fun toggleFavorite(v: Vocab) = viewModelScope.launch { repo.setFavorite(v.id, !v.isFavorite) }
     fun delete(v: Vocab) = viewModelScope.launch { repo.deleteVocab(v.id) }
+
+    /** 저장된 단어 수정(뜻/병음/한자/품사). */
+    fun updateVocab(v: Vocab, hanzi: String, pinyin: String, pos: List<String>, meaning: String) = viewModelScope.launch {
+        repo.updateVocab(
+            v.copy(hanzi = hanzi, pinyin = pinyin, partOfSpeech = pos.joinToString("·").ifEmpty { null }, meaning = meaning)
+        )
+    }
+
+    /** 현재 단원의 '단어만' 전체 삭제(회화는 보존). 단어·회화 모두 비면 단원도 삭제됨. */
+    fun deleteCurrentUnitVocab() {
+        val id = _selectedUnitId.value ?: return
+        viewModelScope.launch {
+            repo.deleteVocabForUnit(id)
+            editMode.value = false
+        }
+    }
+
+    /** 현재 단원 제목(권-과) 수정. */
+    fun renameCurrentUnit(newTitle: String) {
+        val id = _selectedUnitId.value ?: return
+        if (newTitle.isBlank()) return
+        viewModelScope.launch { repo.renameUnit(id, newTitle) }
+    }
 
     fun addVocab(hanzi: String, pinyin: String, pos: List<String>, meaning: String) {
         val unitId = _selectedUnitId.value ?: return

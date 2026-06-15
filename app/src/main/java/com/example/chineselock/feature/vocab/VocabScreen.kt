@@ -40,6 +40,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -51,6 +52,8 @@ import com.example.chineselock.ui.StudyMode
 import com.example.chineselock.ui.VocabListRow
 import com.example.chineselock.ui.theme.AppColors
 
+private val DangerRed = Color(0xFFD14D4D)
+
 @Composable
 fun VocabScreen(vm: VocabViewModel = hiltViewModel()) {
     val units by vm.units.collectAsStateWithLifecycle()
@@ -61,6 +64,9 @@ fun VocabScreen(vm: VocabViewModel = hiltViewModel()) {
     val revealed by vm.revealed.collectAsStateWithLifecycle()
 
     var showAdd by remember { mutableStateOf(false) }
+    var showDeleteUnit by remember { mutableStateOf(false) }
+    var showRename by remember { mutableStateOf(false) }
+    var editVocab by remember { mutableStateOf<Vocab?>(null) }
     val title = units.firstOrNull { it.id == selectedId }?.title ?: "—"
 
     Surface(Modifier.fillMaxSize()) {
@@ -87,7 +93,7 @@ fun VocabScreen(vm: VocabViewModel = hiltViewModel()) {
             LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(0.dp)) {
                 items(vocab, key = { it.id }) { v ->
                     if (editMode) {
-                        VocabEditRow(v, onDelete = { vm.delete(v) }, onSpeak = { vm.speak(v.hanzi) })
+                        VocabEditRow(v, onEdit = { editVocab = v }, onDelete = { vm.delete(v) }, onSpeak = { vm.speak(v.hanzi) })
                     } else {
                         VocabListRow(
                             hanzi = v.hanzi, pinyin = v.pinyin, partOfSpeech = v.partOfSpeech, meaning = v.meaning,
@@ -113,9 +119,53 @@ fun VocabScreen(vm: VocabViewModel = hiltViewModel()) {
                             Text("  단어 추가", color = AppColors.Purple, fontSize = 13.sp)
                         }
                     }
+                    if (selectedId != null) {
+                        item {
+                            Row(
+                                Modifier.fillMaxWidth().padding(top = 10.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .border(1.dp, AppColors.Faint, RoundedCornerShape(12.dp))
+                                    .clickable { showRename = true }.padding(11.dp),
+                                horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Icon(Icons.Filled.Edit, null, tint = AppColors.Purple, modifier = Modifier.size(15.dp))
+                                Text("  제목(단원) 수정", color = AppColors.Purple, fontSize = 13.sp)
+                            }
+                        }
+                    }
+                    if (selectedId != null) {
+                        item {
+                            Row(
+                                Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 20.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .border(1.dp, DangerRed.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                                    .clickable { showDeleteUnit = true }
+                                    .padding(11.dp),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Icon(Icons.Filled.DeleteOutline, null, tint = DangerRed, modifier = Modifier.size(16.dp))
+                                Text("  $title 단어 전체 삭제", color = DangerRed, fontSize = 13.sp)
+                            }
+                        }
+                    }
                 }
             }
         }
+    }
+
+    if (showDeleteUnit) {
+        AlertDialog(
+            onDismissRequest = { showDeleteUnit = false },
+            title = { Text("$title 단어 전체 삭제") },
+            text = { Text("이 단원의 단어가 모두 삭제돼요. (회화는 유지됩니다) 되돌릴 수 없어요.") },
+            confirmButton = {
+                TextButton(onClick = { vm.deleteCurrentUnitVocab(); showDeleteUnit = false }) {
+                    Text("단어 전체 삭제", color = DangerRed)
+                }
+            },
+            dismissButton = { TextButton(onClick = { showDeleteUnit = false }) { Text("취소") } },
+        )
     }
 
     if (showAdd) {
@@ -124,6 +174,41 @@ fun VocabScreen(vm: VocabViewModel = hiltViewModel()) {
             onAdd = { h, p, pos, m -> vm.addVocab(h, p, pos, m); showAdd = false },
         )
     }
+
+    editVocab?.let { v ->
+        AddVocabDialog(
+            initial = v,
+            onDismiss = { editVocab = null },
+            onAdd = { h, p, pos, m -> vm.updateVocab(v, h, p, pos, m); editVocab = null },
+        )
+    }
+
+    if (showRename) {
+        RenameUnitDialog(
+            current = title,
+            onDismiss = { showRename = false },
+            onConfirm = { vm.renameCurrentUnit(it); showRename = false },
+        )
+    }
+}
+
+@Composable
+private fun RenameUnitDialog(current: String, onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
+    var text by remember { mutableStateOf(current) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("제목(단원) 수정") },
+        text = {
+            OutlinedTextField(
+                value = text, onValueChange = { text = it }, singleLine = true,
+                placeholder = { Text("예: 3-1", color = AppColors.Muted) },
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(text.trim()) }, enabled = text.isNotBlank()) { Text("저장") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("취소") } },
+    )
 }
 
 @Composable
@@ -171,8 +256,8 @@ private fun ModeSegment(mode: StudyMode, onSelect: (StudyMode) -> Unit) {
 }
 
 @Composable
-private fun VocabEditRow(v: Vocab, onDelete: () -> Unit, onSpeak: () -> Unit) {
-    Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+private fun VocabEditRow(v: Vocab, onEdit: () -> Unit, onDelete: () -> Unit, onSpeak: () -> Unit) {
+    Row(Modifier.fillMaxWidth().clickable { onEdit() }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(v.hanzi, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.width(52.dp))
         Spacer(Modifier.width(7.dp))
         Column(Modifier.weight(1f)) {
@@ -192,14 +277,18 @@ private fun VocabEditRow(v: Vocab, onDelete: () -> Unit, onSpeak: () -> Unit) {
 }
 
 @Composable
-private fun AddVocabDialog(onDismiss: () -> Unit, onAdd: (String, String, List<String>, String) -> Unit) {
-    var hanzi by remember { mutableStateOf("") }
-    var pinyin by remember { mutableStateOf("") }
-    var pos by remember { mutableStateOf("") }
-    var meaning by remember { mutableStateOf("") }
+private fun AddVocabDialog(
+    onDismiss: () -> Unit,
+    onAdd: (String, String, List<String>, String) -> Unit,
+    initial: Vocab? = null,
+) {
+    var hanzi by remember { mutableStateOf(initial?.hanzi ?: "") }
+    var pinyin by remember { mutableStateOf(initial?.pinyin ?: "") }
+    var pos by remember { mutableStateOf(initial?.partOfSpeech ?: "") }
+    var meaning by remember { mutableStateOf(initial?.meaning ?: "") }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("단어 추가") },
+        title = { Text(if (initial == null) "단어 추가" else "단어 수정") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(hanzi, { hanzi = it }, label = { Text("한자") }, singleLine = true)
@@ -210,9 +299,9 @@ private fun AddVocabDialog(onDismiss: () -> Unit, onAdd: (String, String, List<S
         },
         confirmButton = {
             TextButton(
-                onClick = { onAdd(hanzi.trim(), pinyin.trim(), pos.split("·").map { it.trim() }.filter { it.isNotEmpty() }, meaning.trim()) },
+                onClick = { onAdd(hanzi.trim(), pinyin.trim(), pos.split("·", ",", " ").map { it.trim() }.filter { it.isNotEmpty() }, meaning.trim()) },
                 enabled = hanzi.isNotBlank() && meaning.isNotBlank(),
-            ) { Text("추가") }
+            ) { Text(if (initial == null) "추가" else "저장") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("취소") } },
     )

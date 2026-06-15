@@ -21,8 +21,36 @@ interface StudyUnitDao {
     @Query("SELECT * FROM study_unit ORDER BY book, lesson")
     fun observeAll(): Flow<List<StudyUnit>>
 
+    /** 단어가 1개 이상 있는 단원만(단어장 드롭다운용). 최근 업로드순(가장 최근 추가한 단어 기준 최신 먼저). */
+    @Query(
+        """SELECT u.* FROM study_unit u
+           WHERE EXISTS (SELECT 1 FROM vocab v WHERE v.unitId = u.id)
+           ORDER BY (SELECT MAX(v.id) FROM vocab v WHERE v.unitId = u.id) DESC"""
+    )
+    fun observeWithVocab(): Flow<List<StudyUnit>>
+
+    /** 회화가 1개 이상 있는 단원만(회화 드롭다운용). 최근 업로드순(가장 최근 추가한 회화 기준 최신 먼저). */
+    @Query(
+        """SELECT u.* FROM study_unit u
+           WHERE EXISTS (SELECT 1 FROM dialogue d WHERE d.unitId = u.id)
+           ORDER BY (SELECT MAX(d.id) FROM dialogue d WHERE d.unitId = u.id) DESC"""
+    )
+    fun observeWithDialogue(): Flow<List<StudyUnit>>
+
     @Query("SELECT * FROM study_unit WHERE book = :book AND lesson = :lesson LIMIT 1")
     fun find(book: Int, lesson: Int): StudyUnit?
+
+    /** 제목(입력 그대로) 기준 조회 — 자유 형식 제목("3-1-2" 등) 지원용. */
+    @Query("SELECT * FROM study_unit WHERE title = :title LIMIT 1")
+    fun findByTitle(title: String): StudyUnit?
+
+    /** 단원 통째로 삭제. FK CASCADE로 소속 단어·품사·회화도 함께 삭제됨. */
+    @Query("DELETE FROM study_unit WHERE id = :id")
+    fun deleteById(id: Long)
+
+    /** 단원 제목(권/과) 수정. */
+    @Query("UPDATE study_unit SET book = :book, lesson = :lesson, title = :title WHERE id = :id")
+    fun rename(id: Long, book: Int, lesson: Int, title: String)
 }
 
 @Dao
@@ -33,6 +61,11 @@ interface VocabDao {
     @Insert fun insert(item: Vocab): Long
     @Update fun update(item: Vocab)
     @Query("DELETE FROM vocab WHERE id = :id") fun deleteById(id: Long)
+
+    /** 단원의 단어만 전체 삭제(회화는 보존). vocab_pos는 CASCADE로 함께 삭제. */
+    @Query("DELETE FROM vocab WHERE unitId = :unitId") fun deleteByUnit(unitId: Long)
+
+    @Query("SELECT COUNT(*) FROM vocab WHERE unitId = :unitId") fun countByUnit(unitId: Long): Int
 
     @Query("SELECT * FROM vocab WHERE unitId = :unitId ORDER BY orderInUnit")
     fun observeByUnit(unitId: Long): Flow<List<Vocab>>
@@ -101,10 +134,33 @@ interface DialogueDao {
     @Query("SELECT * FROM dialogue WHERE unitId = :unitId ORDER BY orderInUnit")
     fun observeByUnit(unitId: Long): Flow<List<Dialogue>>
 
+    /** 번역 매칭용: 단원의 회화를 순서대로 1회 조회(Flow 아님). */
+    @Query("SELECT * FROM dialogue WHERE unitId = :unitId ORDER BY orderInUnit")
+    fun getByUnit(unitId: Long): List<Dialogue>
+
     // 수정(편집): 문장 추가 / 수정 / 삭제
     @Insert fun insert(item: Dialogue): Long
     @Update fun update(item: Dialogue)
     @Query("DELETE FROM dialogue WHERE id = :id") fun deleteById(id: Long)
+
+    /** 단원의 회화만 전체 삭제(단어는 보존). */
+    @Query("DELETE FROM dialogue WHERE unitId = :unitId") fun deleteByUnit(unitId: Long)
+
+    /** 단원의 번역(해석)만 비움 — 회화 문장은 그대로 두고 korean만 NULL로. */
+    @Query("UPDATE dialogue SET korean = NULL WHERE unitId = :unitId") fun clearKoreanByUnit(unitId: Long)
+
+    /** 단원에 번역(해석)이 채워진 문장이 몇 개인지(번역 삭제 버튼 노출용). */
+    @Query("SELECT COUNT(*) FROM dialogue WHERE unitId = :unitId AND korean IS NOT NULL AND korean != ''") fun countTranslated(unitId: Long): Int
+
+    @Query("SELECT COUNT(*) FROM dialogue WHERE unitId = :unitId") fun countByUnit(unitId: Long): Int
+
+    /** 오늘의 회화: 오늘의 단어가 들어간 회화 문장 중 가장 짧은 것 1개(예문으로 적당). */
+    @Query("SELECT * FROM dialogue WHERE chinese LIKE '%' || :frag || '%' ORDER BY LENGTH(chinese) ASC LIMIT 1")
+    fun findContaining(frag: String): Dialogue?
+
+    @Query("SELECT COUNT(*) FROM dialogue") fun count(): Int
+
+    @Query("SELECT * FROM dialogue LIMIT 1 OFFSET :index") fun getAt(index: Int): Dialogue?
 }
 
 @Dao

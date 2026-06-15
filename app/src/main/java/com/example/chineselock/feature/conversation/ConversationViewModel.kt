@@ -25,7 +25,7 @@ class ConversationViewModel @Inject constructor(
 ) : ViewModel() {
 
     val units: StateFlow<List<StudyUnit>> =
-        repo.observeUnits().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+        repo.observeUnitsWithDialogue().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _selectedUnitId = MutableStateFlow<Long?>(null)
     val selectedUnitId: StateFlow<Long?> = _selectedUnitId
@@ -40,7 +40,12 @@ class ConversationViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             units.collect { list ->
-                if (_selectedUnitId.value == null && list.isNotEmpty()) _selectedUnitId.value = list.first().id
+                val cur = _selectedUnitId.value
+                if (list.isEmpty()) {
+                    _selectedUnitId.value = null
+                } else if (cur == null || list.none { it.id == cur }) {
+                    _selectedUnitId.value = list.first().id
+                }
             }
         }
     }
@@ -49,10 +54,40 @@ class ConversationViewModel @Inject constructor(
     fun setTranslation(v: Boolean) { showTranslation.value = v }
     fun toggleEdit() { editMode.value = !editMode.value }
 
+    /** 현재 단원의 '회화만' 전체 삭제(단어는 보존). */
+    fun deleteAllDialogues() {
+        val id = _selectedUnitId.value ?: return
+        viewModelScope.launch {
+            repo.deleteDialoguesForUnit(id)
+            editMode.value = false
+        }
+    }
+
+    /** 현재 단원의 '번역(해석)만' 전체 지움(회화 문장은 보존). 번역 잘못 매칭됐을 때 재촬영용. */
+    fun clearTranslations() {
+        val id = _selectedUnitId.value ?: return
+        viewModelScope.launch {
+            repo.clearTranslations(id)
+            editMode.value = false
+        }
+    }
+
+    /** 현재 단원 제목(권-과) 수정. */
+    fun renameCurrentUnit(newTitle: String) {
+        val id = _selectedUnitId.value ?: return
+        if (newTitle.isBlank()) return
+        viewModelScope.launch { repo.renameUnit(id, newTitle) }
+    }
+
     fun speak(text: String) = tts.speak(text)
     fun playAll() = tts.speakSequence(turns.value.map { it.chinese })
 
     fun delete(d: Dialogue) = viewModelScope.launch { repo.deleteDialogue(d.id) }
+
+    /** 저장된 회화 문장 수정. */
+    fun updateLine(d: Dialogue, speaker: String?, chinese: String, pinyin: String?, korean: String?) = viewModelScope.launch {
+        repo.updateDialogue(d.copy(speaker = speaker, chinese = chinese, pinyin = pinyin, korean = korean))
+    }
 
     fun addLine(speaker: String?, chinese: String, pinyin: String?, korean: String?) {
         val unitId = _selectedUnitId.value ?: return

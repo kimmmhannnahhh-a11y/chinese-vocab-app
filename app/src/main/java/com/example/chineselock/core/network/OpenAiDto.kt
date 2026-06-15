@@ -57,3 +57,11 @@ data class DialogueItem(
 /** 해석 페이지(한국어만) 추출 결과. Dialogue와 순서로 매칭. */
 @Serializable
 data class TranslationExtraction(val lines: List<String>)
+
+/** 오늘의 회화: 오늘의 단어로 만든 AI 예문 1개(중국어+병음+해석). */
+@Serializable
+data class ExampleSentence(
+    val chinese: String = "",
+    val pinyin: String = "",
+    val korean: String = "",
+)
